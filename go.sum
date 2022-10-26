@@ -1,0 +1,10 @@
+github.com/TimothyStiles/poly v0.21.1 h1:/EyejgWkrXTtjddWU7fQtjwPi3EbwLd20r9XnPJTc8M=
+github.com/TimothyStiles/poly v0.21.1/go.mod h1:yi9atF2gCAQz06k0fAEaWAtKAEgn2TZHjm2CUYVbWAs=
+github.com/gopherjs/gopherjs v1.17.2 h1:fQnZVsXk8uxXIStYb0N4bGk7jeyTalG/wsZjQ25dO0g=
+github.com/gopherjs/gopherjs v1.17.2/go.mod h1:pRRIvn/QzFLrKfvEz3qUuEhtE/zLCWfreZ6J5gM2i+k=
+github.com/lunny/log v0.0.0-20160921050905-7887c61bf0de h1:nyxwRdWHAVxpFcDThedEgQ07DbcRc5xgNObtbTp76fk=
+github.com/lunny/log v0.0.0-20160921050905-7887c61bf0de/go.mod h1:3q8WtuPQsoRbatJuy3nvq/hRSvuBJrHHr+ybPPiNvHQ=
+github.com/miratronix/jopher v0.0.0-20200228204442-56bcab34f1a3 h1:lOZEb4IMbMjOLMLvo4WjX6zJ8y3KsFrUtVa2rJS40HQ=
+github.com/miratronix/jopher v0.0.0-20200228204442-56bcab34f1a3/go.mod h1:u6ZTEUu3UCNJmCOT3vqHPyI0i4cT7mplTbuHApP/lD8=
+github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQflz0v0=
+github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTSsCt+hzestvNj0=

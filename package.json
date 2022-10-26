@@ -1,7 +1,18 @@
 {
   "name": "poly.js",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "0.0.1",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "yarn go:clean && yarn go:build && node src/index",
+    "go:build": "gopherjs build -o ./build/poly.js",
+    "go:clean": "rm -rf ./build/*"
+  },
   "author": "isaacguerreir <isaacguerreirocom@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "keyworkds": [
+    "bioinformatics",
+    "synthetic-biology",
+    "synbio",
+    "genetic-engineering"
+  ]
 }
