@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "main": "src/index.js",
   "scripts": {
-    "start": "yarn go:clean && yarn go:build && node src/index",
+    "start": "yarn go:clean && yarn go:build && node src/js/index",
     "go:build": "gopherjs build -o ./build/poly.js",
     "go:clean": "rm -rf ./build/*"
   },
