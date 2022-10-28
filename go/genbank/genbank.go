@@ -1,8 +1,6 @@
 package genbank
 
 import (
-	"fmt"
-
 	"github.com/TimothyStiles/poly/io/genbank"
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/miratronix/jopher"
