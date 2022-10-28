@@ -1,0 +1,8 @@
+{
+  "name": "polygo",
+  "version": "0.0.1",
+  "main": "src/poly.js",
+  "types": "./@types/genbank/genbank.d.ts",
+  "author": "Isaac Guerreiro <isaacguerreirocom@gmail.com> (https://github.com/isaacguerreir)",
+  "license": "MIT"
+}

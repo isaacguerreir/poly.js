@@ -4,7 +4,6 @@ import (
 	"github.com/TimothyStiles/poly/io/genbank"
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/miratronix/jopher"
-	// "github.com/miratronix/jopher"
 )
 
 type GenbankModule struct {
