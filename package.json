@@ -4,13 +4,14 @@
   "main": "src/js/index.js",
   "scripts": {
     "start": "yarn go && node ./build/index",
-    "dev": "yarn go && node src/index",
+    "dev": "yarn go && ts-node src/index",
     "types:generate": "tygo generate",
     "go": "yarn go:clean && yarn go:build",
-    "go:build": "gopherjs build -o ./src/lib/poly.js",
-    "go:clean": "rm -rf ./lib/*",
+    "go:build": "gopherjs build -o ./lib/src/poly.js",
+    "go:clean": "rm -rf ./poly/src/*.js",
     "build": "rm -rf ./build && tsc"
   },
+  "types": "@types/genbank/genbank.d.ts",
   "private": true,
   "workspaces": ["./src/js", "./src/poly"],
   "author": "isaacguerreir <isaacguerreirocom@gmail.com>",
