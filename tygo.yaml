@@ -1,6 +1,6 @@
 packages:
   - path: "github.com/isaacguerreir/poly.js/src/go/genbank"
-    output_path: "./src/@types/genbank/genbank.ts"
+    output_path: "./src/poly/genbank/genbank.ts"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       null.String: "null | string"

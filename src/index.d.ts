@@ -1,16 +1,20 @@
 /*
   Module and interface declaration for Poly
 */
-  declare namespace genbank {
+export = Poly
+
+export as namespace Poly
+
+declare namespace Poly {
+  namespace genbank {
     function read(path: string): Promise<GenbankJs>
   }
-
-  export interface GenbankJs {
+  interface GenbankJs {
     meta: MetaJs;
     features: FeatureJs[];
     sequence: string;
   }
-  export interface MetaJs {
+  interface MetaJs {
     date: string;
     definition: string;
     accession: string;
@@ -30,7 +34,7 @@
   /**
    * Reference holds information for one reference in a Meta struct.
    */
-  export interface ReferenceJs {
+  interface ReferenceJs {
     authors: string;
     title: string;
     journal: string;
@@ -41,7 +45,7 @@
   /**
    * Locus holds Locus information in a Meta struct.
    */
-  export interface LocusJs {
+  interface LocusJs {
     name: string;
     sequenceLength: string;
     moleculeType: string;
@@ -51,7 +55,7 @@
     circular: boolean;
     linear: boolean;
   }
-  export interface FeatureJs {
+  interface FeatureJs {
     type: string;
     description: string;
     attributes: { [key: string]: string};
@@ -60,7 +64,7 @@
     sequence: string;
     location: LocationJs;
   }
-  export interface LocationJs {
+  interface LocationJs {
     start: number /* int */;
     end: number /* int */;
     complement: boolean;
@@ -70,3 +74,5 @@
     gbkLocationString: string;
     subLocations: LocationJs[];
   }
+}
+

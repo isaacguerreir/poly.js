@@ -1,15 +1,16 @@
 {
-  "name": "polyjs",
+  "name": "poly.js",
   "version": "0.0.1",
-  "main": "src/js/index.js",
+  "main": "build/src/index.js",
   "scripts": {
-    "start": "yarn go && node ./build/index",
+    "start": "yarn go && yarn build && node ./build/src/index",
     "build": "rm -rf ./build && tsc",
     "dev": "yarn go && yarn dev:run",
     "dev:run": "ts-node src/index",
     "go": "yarn go:clean && yarn go:build",
-    "go:build": "gopherjs build -o ./lib/src/poly.js",
-    "go:clean": "rm -rf ./poly/src/*.js",
+    "go:build": "gopherjs build -o ./src/index.js",
+    "go:clean": "rm -rf ./src/*.{js, map}",
+    "test": "ts-node ./tests/genbank.test",
     "types:generate": "tygo generate"
   },
   "author": "isaacguerreir <isaacguerreirocom@gmail.com>",
