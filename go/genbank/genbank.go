@@ -93,9 +93,7 @@ func GenbankFactory() *js.Object {
 }
 
 func Read(path string) *js.Object {
-  fmt.Println(path)
 	data, _ := genbank.Read(path)
-  fmt.Println(data)
 	return mapGenbank(data).Object
 }
 
