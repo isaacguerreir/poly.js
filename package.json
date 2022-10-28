@@ -1,19 +1,20 @@
 {
-  "name": "poly.js",
+  "name": "@isaacguerreiro/polyjs",
   "version": "0.0.1",
   "main": "build/src/index.js",
   "scripts": {
     "start": "yarn go && yarn build && node ./build/src/index",
     "build": "rm -rf ./build && tsc",
     "dev": "yarn go && yarn dev:run",
-    "dev:run": "ts-node src/index",
+    "dev:run": "ts-node src/inde.x",
     "go": "yarn go:clean && yarn go:build",
     "go:build": "gopherjs build -o ./src/index.js",
     "go:clean": "rm -rf ./src/*.{js, map}",
-    "test": "ts-node ./tests/genbank.test",
+    "test:mock": "ts-node ./tests/genbank.test",
     "types:generate": "tygo generate"
   },
   "author": "isaacguerreir <isaacguerreirocom@gmail.com>",
+  "types": "src/index.d.ts",
   "license": "MIT",
   "keywords": [
     "bioinformatics",
