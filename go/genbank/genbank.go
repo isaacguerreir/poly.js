@@ -1,10 +1,11 @@
 package genbank
 
 import (
+	"fmt"
+
 	"github.com/TimothyStiles/poly/io/genbank"
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/miratronix/jopher"
-	// "github.com/miratronix/jopher"
 )
 
 type GenbankModule struct {
@@ -92,7 +93,9 @@ func GenbankFactory() *js.Object {
 }
 
 func Read(path string) *js.Object {
+  fmt.Println(path)
 	data, _ := genbank.Read(path)
+  fmt.Println(data)
 	return mapGenbank(data).Object
 }
 

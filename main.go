@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gopherjs/gopherjs/js"
-  "github.com/isaacguerreir/poly.js/src/go/genbank"
+  "github.com/isaacguerreir/poly.js/go/genbank"
 )
 
 func main() {
