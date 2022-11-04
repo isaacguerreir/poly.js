@@ -7435,12 +7435,24 @@ $packages["unicode/utf8"] = (function() {
 	return $pkg;
 })();
 $packages["bytes"] = (function() {
-	var $pkg = {}, $init, errors, bytealg, io, unicode, utf8, Buffer, readOp, sliceType, ptrType$1, errNegativeRead, errUnreadByte, IndexByte, Equal, HasPrefix, Index, makeSlice;
+	var $pkg = {}, $init, errors, bytealg, io, unicode, utf8, Reader, Buffer, readOp, sliceType, ptrType$1, ptrType$2, errNegativeRead, errUnreadByte, NewReader, IndexByte, Equal, HasPrefix, Index, makeSlice;
 	errors = $packages["errors"];
 	bytealg = $packages["internal/bytealg"];
 	io = $packages["io"];
 	unicode = $packages["unicode"];
 	utf8 = $packages["unicode/utf8"];
+	Reader = $pkg.Reader = $newType(0, $kindStruct, "bytes.Reader", true, "bytes", true, function(s_, i_, prevRune_) {
+		this.$val = this;
+		if (arguments.length === 0) {
+			this.s = sliceType.nil;
+			this.i = new $Int64(0, 0);
+			this.prevRune = 0;
+			return;
+		}
+		this.s = s_;
+		this.i = i_;
+		this.prevRune = prevRune_;
+	});
 	Buffer = $pkg.Buffer = $newType(0, $kindStruct, "bytes.Buffer", true, "bytes", true, function(buf_, off_, lastRead_) {
 		this.$val = this;
 		if (arguments.length === 0) {
@@ -7456,6 +7468,202 @@ $packages["bytes"] = (function() {
 	readOp = $pkg.readOp = $newType(1, $kindInt8, "bytes.readOp", true, "bytes", false, null);
 	sliceType = $sliceType($Uint8);
 	ptrType$1 = $ptrType(Buffer);
+	ptrType$2 = $ptrType(Reader);
+	Reader.ptr.prototype.Len = function() {
+		var r, x, x$1, x$2, x$3, x$4;
+		r = this;
+		if ((x = r.i, x$1 = (new $Int64(0, r.s.$length)), (x.$high > x$1.$high || (x.$high === x$1.$high && x.$low >= x$1.$low)))) {
+			return 0;
+		}
+		return (((x$2 = (x$3 = (new $Int64(0, r.s.$length)), x$4 = r.i, new $Int64(x$3.$high - x$4.$high, x$3.$low - x$4.$low)), x$2.$low + ((x$2.$high >> 31) * 4294967296)) >> 0));
+	};
+	Reader.prototype.Len = function() { return this.$val.Len(); };
+	Reader.ptr.prototype.Size = function() {
+		var r;
+		r = this;
+		return (new $Int64(0, r.s.$length));
+	};
+	Reader.prototype.Size = function() { return this.$val.Size(); };
+	Reader.ptr.prototype.Read = function(b) {
+		var _tmp, _tmp$1, b, err, n, r, x, x$1, x$2, x$3;
+		n = 0;
+		err = $ifaceNil;
+		r = this;
+		if ((x = r.i, x$1 = (new $Int64(0, r.s.$length)), (x.$high > x$1.$high || (x.$high === x$1.$high && x.$low >= x$1.$low)))) {
+			_tmp = 0;
+			_tmp$1 = io.EOF;
+			n = _tmp;
+			err = _tmp$1;
+			return [n, err];
+		}
+		r.prevRune = -1;
+		n = $copySlice(b, $subslice(r.s, $flatten64(r.i)));
+		r.i = (x$2 = r.i, x$3 = (new $Int64(0, n)), new $Int64(x$2.$high + x$3.$high, x$2.$low + x$3.$low));
+		return [n, err];
+	};
+	Reader.prototype.Read = function(b) { return this.$val.Read(b); };
+	Reader.ptr.prototype.ReadAt = function(b, off) {
+		var _tmp, _tmp$1, _tmp$2, _tmp$3, b, err, n, off, r, x;
+		n = 0;
+		err = $ifaceNil;
+		r = this;
+		if ((off.$high < 0 || (off.$high === 0 && off.$low < 0))) {
+			_tmp = 0;
+			_tmp$1 = errors.New("bytes.Reader.ReadAt: negative offset");
+			n = _tmp;
+			err = _tmp$1;
+			return [n, err];
+		}
+		if ((x = (new $Int64(0, r.s.$length)), (off.$high > x.$high || (off.$high === x.$high && off.$low >= x.$low)))) {
+			_tmp$2 = 0;
+			_tmp$3 = io.EOF;
+			n = _tmp$2;
+			err = _tmp$3;
+			return [n, err];
+		}
+		n = $copySlice(b, $subslice(r.s, $flatten64(off)));
+		if (n < b.$length) {
+			err = io.EOF;
+		}
+		return [n, err];
+	};
+	Reader.prototype.ReadAt = function(b, off) { return this.$val.ReadAt(b, off); };
+	Reader.ptr.prototype.ReadByte = function() {
+		var b, r, x, x$1, x$2, x$3, x$4, x$5;
+		r = this;
+		r.prevRune = -1;
+		if ((x = r.i, x$1 = (new $Int64(0, r.s.$length)), (x.$high > x$1.$high || (x.$high === x$1.$high && x.$low >= x$1.$low)))) {
+			return [0, io.EOF];
+		}
+		b = (x$2 = r.s, x$3 = r.i, (($flatten64(x$3) < 0 || $flatten64(x$3) >= x$2.$length) ? ($throwRuntimeError("index out of range"), undefined) : x$2.$array[x$2.$offset + $flatten64(x$3)]));
+		r.i = (x$4 = r.i, x$5 = new $Int64(0, 1), new $Int64(x$4.$high + x$5.$high, x$4.$low + x$5.$low));
+		return [b, $ifaceNil];
+	};
+	Reader.prototype.ReadByte = function() { return this.$val.ReadByte(); };
+	Reader.ptr.prototype.UnreadByte = function() {
+		var r, x, x$1, x$2;
+		r = this;
+		if ((x = r.i, (x.$high < 0 || (x.$high === 0 && x.$low <= 0)))) {
+			return errors.New("bytes.Reader.UnreadByte: at beginning of slice");
+		}
+		r.prevRune = -1;
+		r.i = (x$1 = r.i, x$2 = new $Int64(0, 1), new $Int64(x$1.$high - x$2.$high, x$1.$low - x$2.$low));
+		return $ifaceNil;
+	};
+	Reader.prototype.UnreadByte = function() { return this.$val.UnreadByte(); };
+	Reader.ptr.prototype.ReadRune = function() {
+		var _tmp, _tmp$1, _tmp$2, _tmp$3, _tmp$4, _tmp$5, _tuple, c, ch, err, r, size, x, x$1, x$2, x$3, x$4, x$5, x$6, x$7, x$8;
+		ch = 0;
+		size = 0;
+		err = $ifaceNil;
+		r = this;
+		if ((x = r.i, x$1 = (new $Int64(0, r.s.$length)), (x.$high > x$1.$high || (x.$high === x$1.$high && x.$low >= x$1.$low)))) {
+			r.prevRune = -1;
+			_tmp = 0;
+			_tmp$1 = 0;
+			_tmp$2 = io.EOF;
+			ch = _tmp;
+			size = _tmp$1;
+			err = _tmp$2;
+			return [ch, size, err];
+		}
+		r.prevRune = (((x$2 = r.i, x$2.$low + ((x$2.$high >> 31) * 4294967296)) >> 0));
+		c = (x$3 = r.s, x$4 = r.i, (($flatten64(x$4) < 0 || $flatten64(x$4) >= x$3.$length) ? ($throwRuntimeError("index out of range"), undefined) : x$3.$array[x$3.$offset + $flatten64(x$4)]));
+		if (c < 128) {
+			r.i = (x$5 = r.i, x$6 = new $Int64(0, 1), new $Int64(x$5.$high + x$6.$high, x$5.$low + x$6.$low));
+			_tmp$3 = ((c >> 0));
+			_tmp$4 = 1;
+			_tmp$5 = $ifaceNil;
+			ch = _tmp$3;
+			size = _tmp$4;
+			err = _tmp$5;
+			return [ch, size, err];
+		}
+		_tuple = utf8.DecodeRune($subslice(r.s, $flatten64(r.i)));
+		ch = _tuple[0];
+		size = _tuple[1];
+		r.i = (x$7 = r.i, x$8 = (new $Int64(0, size)), new $Int64(x$7.$high + x$8.$high, x$7.$low + x$8.$low));
+		return [ch, size, err];
+	};
+	Reader.prototype.ReadRune = function() { return this.$val.ReadRune(); };
+	Reader.ptr.prototype.UnreadRune = function() {
+		var r, x;
+		r = this;
+		if ((x = r.i, (x.$high < 0 || (x.$high === 0 && x.$low <= 0)))) {
+			return errors.New("bytes.Reader.UnreadRune: at beginning of slice");
+		}
+		if (r.prevRune < 0) {
+			return errors.New("bytes.Reader.UnreadRune: previous operation was not ReadRune");
+		}
+		r.i = (new $Int64(0, r.prevRune));
+		r.prevRune = -1;
+		return $ifaceNil;
+	};
+	Reader.prototype.UnreadRune = function() { return this.$val.UnreadRune(); };
+	Reader.ptr.prototype.Seek = function(offset, whence) {
+		var _1, abs, offset, r, whence, x, x$1;
+		r = this;
+		r.prevRune = -1;
+		abs = new $Int64(0, 0);
+		_1 = whence;
+		if (_1 === (0)) {
+			abs = offset;
+		} else if (_1 === (1)) {
+			abs = (x = r.i, new $Int64(x.$high + offset.$high, x.$low + offset.$low));
+		} else if (_1 === (2)) {
+			abs = (x$1 = (new $Int64(0, r.s.$length)), new $Int64(x$1.$high + offset.$high, x$1.$low + offset.$low));
+		} else {
+			return [new $Int64(0, 0), errors.New("bytes.Reader.Seek: invalid whence")];
+		}
+		if ((abs.$high < 0 || (abs.$high === 0 && abs.$low < 0))) {
+			return [new $Int64(0, 0), errors.New("bytes.Reader.Seek: negative position")];
+		}
+		r.i = abs;
+		return [abs, $ifaceNil];
+	};
+	Reader.prototype.Seek = function(offset, whence) { return this.$val.Seek(offset, whence); };
+	Reader.ptr.prototype.WriteTo = function(w) {
+		var {_r, _tmp, _tmp$1, _tuple, b, err, m, n, r, w, x, x$1, x$2, x$3, $s, $r, $c} = $restore(this, {w});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		n = new $Int64(0, 0);
+		err = $ifaceNil;
+		r = this;
+		r.prevRune = -1;
+		if ((x = r.i, x$1 = (new $Int64(0, r.s.$length)), (x.$high > x$1.$high || (x.$high === x$1.$high && x.$low >= x$1.$low)))) {
+			_tmp = new $Int64(0, 0);
+			_tmp$1 = $ifaceNil;
+			n = _tmp;
+			err = _tmp$1;
+			$s = -1; return [n, err];
+		}
+		b = $subslice(r.s, $flatten64(r.i));
+		_r = w.Write(b); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		_tuple = _r;
+		m = _tuple[0];
+		err = _tuple[1];
+		if (m > b.$length) {
+			$panic(new $String("bytes.Reader.WriteTo: invalid Write count"));
+		}
+		r.i = (x$2 = r.i, x$3 = (new $Int64(0, m)), new $Int64(x$2.$high + x$3.$high, x$2.$low + x$3.$low));
+		n = (new $Int64(0, m));
+		if (!((m === b.$length)) && $interfaceIsEqual(err, $ifaceNil)) {
+			err = io.ErrShortWrite;
+		}
+		$s = -1; return [n, err];
+		/* */ } return; } var $f = {$blk: Reader.ptr.prototype.WriteTo, $c: true, $r, _r, _tmp, _tmp$1, _tuple, b, err, m, n, r, w, x, x$1, x$2, x$3, $s};return $f;
+	};
+	Reader.prototype.WriteTo = function(w) { return this.$val.WriteTo(w); };
+	Reader.ptr.prototype.Reset = function(b) {
+		var b, r;
+		r = this;
+		Reader.copy(r, new Reader.ptr(b, new $Int64(0, 0), -1));
+	};
+	Reader.prototype.Reset = function(b) { return this.$val.Reset(b); };
+	NewReader = function(b) {
+		var b;
+		return new Reader.ptr(b, new $Int64(0, 0), -1);
+	};
+	$pkg.NewReader = NewReader;
 	IndexByte = function(s, c) {
 		var _i, _ref, b, c, i, s;
 		_ref = s;
@@ -8075,7 +8283,9 @@ $packages["bytes"] = (function() {
 		return [line, err];
 	};
 	Buffer.prototype.ReadString = function(delim) { return this.$val.ReadString(delim); };
+	ptrType$2.methods = [{prop: "Len", name: "Len", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Size", name: "Size", pkg: "", typ: $funcType([], [$Int64], false)}, {prop: "Read", name: "Read", pkg: "", typ: $funcType([sliceType], [$Int, $error], false)}, {prop: "ReadAt", name: "ReadAt", pkg: "", typ: $funcType([sliceType, $Int64], [$Int, $error], false)}, {prop: "ReadByte", name: "ReadByte", pkg: "", typ: $funcType([], [$Uint8, $error], false)}, {prop: "UnreadByte", name: "UnreadByte", pkg: "", typ: $funcType([], [$error], false)}, {prop: "ReadRune", name: "ReadRune", pkg: "", typ: $funcType([], [$Int32, $Int, $error], false)}, {prop: "UnreadRune", name: "UnreadRune", pkg: "", typ: $funcType([], [$error], false)}, {prop: "Seek", name: "Seek", pkg: "", typ: $funcType([$Int64, $Int], [$Int64, $error], false)}, {prop: "WriteTo", name: "WriteTo", pkg: "", typ: $funcType([io.Writer], [$Int64, $error], false)}, {prop: "Reset", name: "Reset", pkg: "", typ: $funcType([sliceType], [], false)}];
 	ptrType$1.methods = [{prop: "Bytes", name: "Bytes", pkg: "", typ: $funcType([], [sliceType], false)}, {prop: "String", name: "String", pkg: "", typ: $funcType([], [$String], false)}, {prop: "empty", name: "empty", pkg: "bytes", typ: $funcType([], [$Bool], false)}, {prop: "Len", name: "Len", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Cap", name: "Cap", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Truncate", name: "Truncate", pkg: "", typ: $funcType([$Int], [], false)}, {prop: "Reset", name: "Reset", pkg: "", typ: $funcType([], [], false)}, {prop: "tryGrowByReslice", name: "tryGrowByReslice", pkg: "bytes", typ: $funcType([$Int], [$Int, $Bool], false)}, {prop: "grow", name: "grow", pkg: "bytes", typ: $funcType([$Int], [$Int], false)}, {prop: "Grow", name: "Grow", pkg: "", typ: $funcType([$Int], [], false)}, {prop: "Write", name: "Write", pkg: "", typ: $funcType([sliceType], [$Int, $error], false)}, {prop: "WriteString", name: "WriteString", pkg: "", typ: $funcType([$String], [$Int, $error], false)}, {prop: "ReadFrom", name: "ReadFrom", pkg: "", typ: $funcType([io.Reader], [$Int64, $error], false)}, {prop: "WriteTo", name: "WriteTo", pkg: "", typ: $funcType([io.Writer], [$Int64, $error], false)}, {prop: "WriteByte", name: "WriteByte", pkg: "", typ: $funcType([$Uint8], [$error], false)}, {prop: "WriteRune", name: "WriteRune", pkg: "", typ: $funcType([$Int32], [$Int, $error], false)}, {prop: "Read", name: "Read", pkg: "", typ: $funcType([sliceType], [$Int, $error], false)}, {prop: "Next", name: "Next", pkg: "", typ: $funcType([$Int], [sliceType], false)}, {prop: "ReadByte", name: "ReadByte", pkg: "", typ: $funcType([], [$Uint8, $error], false)}, {prop: "ReadRune", name: "ReadRune", pkg: "", typ: $funcType([], [$Int32, $Int, $error], false)}, {prop: "UnreadRune", name: "UnreadRune", pkg: "", typ: $funcType([], [$error], false)}, {prop: "UnreadByte", name: "UnreadByte", pkg: "", typ: $funcType([], [$error], false)}, {prop: "ReadBytes", name: "ReadBytes", pkg: "", typ: $funcType([$Uint8], [sliceType, $error], false)}, {prop: "readSlice", name: "readSlice", pkg: "bytes", typ: $funcType([$Uint8], [sliceType, $error], false)}, {prop: "ReadString", name: "ReadString", pkg: "", typ: $funcType([$Uint8], [$String, $error], false)}];
+	Reader.init("bytes", [{prop: "s", name: "s", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "i", name: "i", embedded: false, exported: false, typ: $Int64, tag: ""}, {prop: "prevRune", name: "prevRune", embedded: false, exported: false, typ: $Int, tag: ""}]);
 	Buffer.init("bytes", [{prop: "buf", name: "buf", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "off", name: "off", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "lastRead", name: "lastRead", embedded: false, exported: false, typ: readOp, tag: ""}]);
 	$init = function() {
 		$pkg.$init = function() {};
@@ -8088,946 +8298,6 @@ $packages["bytes"] = (function() {
 		$pkg.ErrTooLarge = errors.New("bytes.Buffer: too large");
 		errNegativeRead = errors.New("bytes.Buffer: reader returned negative count from Read");
 		errUnreadByte = errors.New("bytes.Buffer: UnreadByte: previous operation was not a successful read");
-		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
-	};
-	$pkg.$init = $init;
-	return $pkg;
-})();
-$packages["strings"] = (function() {
-	var $pkg = {}, $init, errors, js, bytealg, io, sync, unicode, utf8, asciiSet, Builder, sliceType, ptrType, ptrType$1, sliceType$2, arrayType, asciiSpace, explode, Contains, ContainsAny, ContainsRune, IndexRune, IndexAny, genSplit, Split, HasPrefix, Map, TrimLeftFunc, TrimRightFunc, TrimFunc, indexFunc, lastIndexFunc, makeASCIISet, TrimLeft, trimLeftByte, trimLeftASCII, trimLeftUnicode, TrimSpace, Replace, Cut, IndexByte, Index, LastIndex, Count;
-	errors = $packages["errors"];
-	js = $packages["github.com/gopherjs/gopherjs/js"];
-	bytealg = $packages["internal/bytealg"];
-	io = $packages["io"];
-	sync = $packages["sync"];
-	unicode = $packages["unicode"];
-	utf8 = $packages["unicode/utf8"];
-	asciiSet = $pkg.asciiSet = $newType(32, $kindArray, "strings.asciiSet", true, "strings", false, null);
-	Builder = $pkg.Builder = $newType(0, $kindStruct, "strings.Builder", true, "strings", true, function(addr_, buf_) {
-		this.$val = this;
-		if (arguments.length === 0) {
-			this.addr = ptrType$1.nil;
-			this.buf = sliceType$2.nil;
-			return;
-		}
-		this.addr = addr_;
-		this.buf = buf_;
-	});
-	sliceType = $sliceType($String);
-	ptrType = $ptrType(asciiSet);
-	ptrType$1 = $ptrType(Builder);
-	sliceType$2 = $sliceType($Uint8);
-	arrayType = $arrayType($Uint32, 8);
-	explode = function(s, n) {
-		var _tuple, a, ch, i, l, n, s, size, x;
-		l = utf8.RuneCountInString(s);
-		if (n < 0 || n > l) {
-			n = l;
-		}
-		a = $makeSlice(sliceType, n);
-		i = 0;
-		while (true) {
-			if (!(i < (n - 1 >> 0))) { break; }
-			_tuple = utf8.DecodeRuneInString(s);
-			ch = _tuple[0];
-			size = _tuple[1];
-			((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = $substring(s, 0, size));
-			s = $substring(s, size);
-			if (ch === 65533) {
-				((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = "\xEF\xBF\xBD");
-			}
-			i = i + (1) >> 0;
-		}
-		if (n > 0) {
-			(x = n - 1 >> 0, ((x < 0 || x >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + x] = s));
-		}
-		return a;
-	};
-	Contains = function(s, substr) {
-		var s, substr;
-		return Index(s, substr) >= 0;
-	};
-	$pkg.Contains = Contains;
-	ContainsAny = function(s, chars) {
-		var chars, s;
-		return IndexAny(s, chars) >= 0;
-	};
-	$pkg.ContainsAny = ContainsAny;
-	ContainsRune = function(s, r) {
-		var r, s;
-		return IndexRune(s, r) >= 0;
-	};
-	$pkg.ContainsRune = ContainsRune;
-	IndexRune = function(s, r) {
-		var _i, _ref, _rune, i, r, r$1, s;
-		if (0 <= r && r < 128) {
-			return IndexByte(s, ((r << 24 >>> 24)));
-		} else if ((r === 65533)) {
-			_ref = s;
-			_i = 0;
-			while (true) {
-				if (!(_i < _ref.length)) { break; }
-				_rune = $decodeRune(_ref, _i);
-				i = _i;
-				r$1 = _rune[0];
-				if (r$1 === 65533) {
-					return i;
-				}
-				_i += _rune[1];
-			}
-			return -1;
-		} else if (!utf8.ValidRune(r)) {
-			return -1;
-		} else {
-			return Index(s, ($encodeRune(r)));
-		}
-	};
-	$pkg.IndexRune = IndexRune;
-	IndexAny = function(s, chars) {
-		var _i, _ref, _rune, _tuple, as, c, chars, i, i$1, isASCII, r, s;
-		if (chars === "") {
-			return -1;
-		}
-		if (chars.length === 1) {
-			r = ((chars.charCodeAt(0) >> 0));
-			if (r >= 128) {
-				r = 65533;
-			}
-			return IndexRune(s, r);
-		}
-		if (s.length > 8) {
-			_tuple = makeASCIISet(chars);
-			as = $clone(_tuple[0], asciiSet);
-			isASCII = _tuple[1];
-			if (isASCII) {
-				i = 0;
-				while (true) {
-					if (!(i < s.length)) { break; }
-					if (new ptrType(as).contains(s.charCodeAt(i))) {
-						return i;
-					}
-					i = i + (1) >> 0;
-				}
-				return -1;
-			}
-		}
-		_ref = s;
-		_i = 0;
-		while (true) {
-			if (!(_i < _ref.length)) { break; }
-			_rune = $decodeRune(_ref, _i);
-			i$1 = _i;
-			c = _rune[0];
-			if (IndexRune(chars, c) >= 0) {
-				return i$1;
-			}
-			_i += _rune[1];
-		}
-		return -1;
-	};
-	$pkg.IndexAny = IndexAny;
-	genSplit = function(s, sep, sepSave, n) {
-		var a, i, m, n, s, sep, sepSave;
-		if (n === 0) {
-			return sliceType.nil;
-		}
-		if (sep === "") {
-			return explode(s, n);
-		}
-		if (n < 0) {
-			n = Count(s, sep) + 1 >> 0;
-		}
-		a = $makeSlice(sliceType, n);
-		n = n - (1) >> 0;
-		i = 0;
-		while (true) {
-			if (!(i < n)) { break; }
-			m = Index(s, sep);
-			if (m < 0) {
-				break;
-			}
-			((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = $substring(s, 0, (m + sepSave >> 0)));
-			s = $substring(s, (m + sep.length >> 0));
-			i = i + (1) >> 0;
-		}
-		((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = s);
-		return $subslice(a, 0, (i + 1 >> 0));
-	};
-	Split = function(s, sep) {
-		var s, sep;
-		return genSplit(s, sep, 0, -1);
-	};
-	$pkg.Split = Split;
-	HasPrefix = function(s, prefix) {
-		var prefix, s;
-		return s.length >= prefix.length && $substring(s, 0, prefix.length) === prefix;
-	};
-	$pkg.HasPrefix = HasPrefix;
-	Map = function(mapping, s) {
-		var {_i, _i$1, _r, _r$1, _ref, _ref$1, _rune, _rune$1, _tuple, b, c, c$1, i, mapping, r, r$1, s, width, $s, $r, $c} = $restore(this, {mapping, s});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		b = new Builder.ptr(ptrType$1.nil, sliceType$2.nil);
-		_ref = s;
-		_i = 0;
-		/* while (true) { */ case 1:
-			/* if (!(_i < _ref.length)) { break; } */ if(!(_i < _ref.length)) { $s = 2; continue; }
-			_rune = $decodeRune(_ref, _i);
-			i = _i;
-			c = _rune[0];
-			_r = mapping(c); /* */ $s = 3; case 3: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-			r = _r;
-			if ((r === c) && !((c === 65533))) {
-				_i += _rune[1];
-				/* continue; */ $s = 1; continue;
-			}
-			width = 0;
-			if (c === 65533) {
-				_tuple = utf8.DecodeRuneInString($substring(s, i));
-				c = _tuple[0];
-				width = _tuple[1];
-				if (!((width === 1)) && (r === c)) {
-					_i += _rune[1];
-					/* continue; */ $s = 1; continue;
-				}
-			} else {
-				width = utf8.RuneLen(c);
-			}
-			b.Grow(s.length + 4 >> 0);
-			b.WriteString($substring(s, 0, i));
-			if (r >= 0) {
-				b.WriteRune(r);
-			}
-			s = $substring(s, (i + width >> 0));
-			/* break; */ $s = 2; continue;
-		case 2:
-		if (b.Cap() === 0) {
-			$s = -1; return s;
-		}
-		_ref$1 = s;
-		_i$1 = 0;
-		/* while (true) { */ case 4:
-			/* if (!(_i$1 < _ref$1.length)) { break; } */ if(!(_i$1 < _ref$1.length)) { $s = 5; continue; }
-			_rune$1 = $decodeRune(_ref$1, _i$1);
-			c$1 = _rune$1[0];
-			_r$1 = mapping(c$1); /* */ $s = 6; case 6: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
-			r$1 = _r$1;
-			if (r$1 >= 0) {
-				if (r$1 < 128) {
-					b.WriteByte(((r$1 << 24 >>> 24)));
-				} else {
-					b.WriteRune(r$1);
-				}
-			}
-			_i$1 += _rune$1[1];
-		$s = 4; continue;
-		case 5:
-		$s = -1; return b.String();
-		/* */ } return; } var $f = {$blk: Map, $c: true, $r, _i, _i$1, _r, _r$1, _ref, _ref$1, _rune, _rune$1, _tuple, b, c, c$1, i, mapping, r, r$1, s, width, $s};return $f;
-	};
-	$pkg.Map = Map;
-	TrimLeftFunc = function(s, f) {
-		var {_r, f, i, s, $s, $r, $c} = $restore(this, {s, f});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		_r = indexFunc(s, f, false); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-		i = _r;
-		if (i === -1) {
-			$s = -1; return "";
-		}
-		$s = -1; return $substring(s, i);
-		/* */ } return; } var $f = {$blk: TrimLeftFunc, $c: true, $r, _r, f, i, s, $s};return $f;
-	};
-	$pkg.TrimLeftFunc = TrimLeftFunc;
-	TrimRightFunc = function(s, f) {
-		var {_r, _tuple, f, i, s, wid, $s, $r, $c} = $restore(this, {s, f});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		_r = lastIndexFunc(s, f, false); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-		i = _r;
-		if (i >= 0 && s.charCodeAt(i) >= 128) {
-			_tuple = utf8.DecodeRuneInString($substring(s, i));
-			wid = _tuple[1];
-			i = i + (wid) >> 0;
-		} else {
-			i = i + (1) >> 0;
-		}
-		$s = -1; return $substring(s, 0, i);
-		/* */ } return; } var $f = {$blk: TrimRightFunc, $c: true, $r, _r, _tuple, f, i, s, wid, $s};return $f;
-	};
-	$pkg.TrimRightFunc = TrimRightFunc;
-	TrimFunc = function(s, f) {
-		var {$24r, _r, _r$1, f, s, $s, $r, $c} = $restore(this, {s, f});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		_r = TrimLeftFunc(s, f); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-		_r$1 = TrimRightFunc(_r, f); /* */ $s = 2; case 2: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
-		$24r = _r$1;
-		$s = 3; case 3: return $24r;
-		/* */ } return; } var $f = {$blk: TrimFunc, $c: true, $r, $24r, _r, _r$1, f, s, $s};return $f;
-	};
-	$pkg.TrimFunc = TrimFunc;
-	indexFunc = function(s, f, truth) {
-		var {_i, _r, _ref, _rune, f, i, r, s, truth, $s, $r, $c} = $restore(this, {s, f, truth});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		_ref = s;
-		_i = 0;
-		/* while (true) { */ case 1:
-			/* if (!(_i < _ref.length)) { break; } */ if(!(_i < _ref.length)) { $s = 2; continue; }
-			_rune = $decodeRune(_ref, _i);
-			i = _i;
-			r = _rune[0];
-			_r = f(r); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-			/* */ if (_r === truth) { $s = 3; continue; }
-			/* */ $s = 4; continue;
-			/* if (_r === truth) { */ case 3:
-				$s = -1; return i;
-			/* } */ case 4:
-			_i += _rune[1];
-		$s = 1; continue;
-		case 2:
-		$s = -1; return -1;
-		/* */ } return; } var $f = {$blk: indexFunc, $c: true, $r, _i, _r, _ref, _rune, f, i, r, s, truth, $s};return $f;
-	};
-	lastIndexFunc = function(s, f, truth) {
-		var {_r, _tuple, f, i, r, s, size, truth, $s, $r, $c} = $restore(this, {s, f, truth});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		i = s.length;
-		/* while (true) { */ case 1:
-			/* if (!(i > 0)) { break; } */ if(!(i > 0)) { $s = 2; continue; }
-			_tuple = utf8.DecodeLastRuneInString($substring(s, 0, i));
-			r = _tuple[0];
-			size = _tuple[1];
-			i = i - (size) >> 0;
-			_r = f(r); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-			/* */ if (_r === truth) { $s = 3; continue; }
-			/* */ $s = 4; continue;
-			/* if (_r === truth) { */ case 3:
-				$s = -1; return i;
-			/* } */ case 4:
-		$s = 1; continue;
-		case 2:
-		$s = -1; return -1;
-		/* */ } return; } var $f = {$blk: lastIndexFunc, $c: true, $r, _r, _tuple, f, i, r, s, size, truth, $s};return $f;
-	};
-	makeASCIISet = function(chars) {
-		var _index, _q, _r, _tmp, _tmp$1, _tmp$2, _tmp$3, as, c, chars, i, ok, y;
-		as = arrayType.zero();
-		ok = false;
-		i = 0;
-		while (true) {
-			if (!(i < chars.length)) { break; }
-			c = chars.charCodeAt(i);
-			if (c >= 128) {
-				_tmp = $clone(as, asciiSet);
-				_tmp$1 = false;
-				asciiSet.copy(as, _tmp);
-				ok = _tmp$1;
-				return [as, ok];
-			}
-			_index = (_q = c / 32, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >>> 0 : $throwRuntimeError("integer divide by zero"));
-			((_index < 0 || _index >= as.length) ? ($throwRuntimeError("index out of range"), undefined) : as[_index] = ((((_index < 0 || _index >= as.length) ? ($throwRuntimeError("index out of range"), undefined) : as[_index]) | (((y = ((_r = c % 32, _r === _r ? _r : $throwRuntimeError("integer divide by zero"))), y < 32 ? (1 << y) : 0) >>> 0))) >>> 0));
-			i = i + (1) >> 0;
-		}
-		_tmp$2 = $clone(as, asciiSet);
-		_tmp$3 = true;
-		asciiSet.copy(as, _tmp$2);
-		ok = _tmp$3;
-		return [as, ok];
-	};
-	asciiSet.prototype.contains = function(c) {
-		var _q, _r, as, c, x, x$1, y;
-		as = this.$val;
-		return !((((((x = as, x$1 = (_q = c / 32, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >>> 0 : $throwRuntimeError("integer divide by zero")), ((x$1 < 0 || x$1 >= x.length) ? ($throwRuntimeError("index out of range"), undefined) : x[x$1])) & (((y = ((_r = c % 32, _r === _r ? _r : $throwRuntimeError("integer divide by zero"))), y < 32 ? (1 << y) : 0) >>> 0))) >>> 0)) === 0));
-	};
-	$ptrType(asciiSet).prototype.contains = function(c) { return (new asciiSet(this.$get())).contains(c); };
-	TrimLeft = function(s, cutset) {
-		var _tuple, as, cutset, ok, s;
-		if (s === "" || cutset === "") {
-			return s;
-		}
-		if ((cutset.length === 1) && cutset.charCodeAt(0) < 128) {
-			return trimLeftByte(s, cutset.charCodeAt(0));
-		}
-		_tuple = makeASCIISet(cutset);
-		as = $clone(_tuple[0], asciiSet);
-		ok = _tuple[1];
-		if (ok) {
-			return trimLeftASCII(s, as);
-		}
-		return trimLeftUnicode(s, cutset);
-	};
-	$pkg.TrimLeft = TrimLeft;
-	trimLeftByte = function(s, c) {
-		var c, s;
-		while (true) {
-			if (!(s.length > 0 && (s.charCodeAt(0) === c))) { break; }
-			s = $substring(s, 1);
-		}
-		return s;
-	};
-	trimLeftASCII = function(s, as) {
-		var as, s;
-		while (true) {
-			if (!(s.length > 0)) { break; }
-			if (!new ptrType(as).contains(s.charCodeAt(0))) {
-				break;
-			}
-			s = $substring(s, 1);
-		}
-		return s;
-	};
-	trimLeftUnicode = function(s, cutset) {
-		var _tmp, _tmp$1, _tuple, cutset, n, r, s;
-		while (true) {
-			if (!(s.length > 0)) { break; }
-			_tmp = ((s.charCodeAt(0) >> 0));
-			_tmp$1 = 1;
-			r = _tmp;
-			n = _tmp$1;
-			if (r >= 128) {
-				_tuple = utf8.DecodeRuneInString(s);
-				r = _tuple[0];
-				n = _tuple[1];
-			}
-			if (!ContainsRune(cutset, r)) {
-				break;
-			}
-			s = $substring(s, n);
-		}
-		return s;
-	};
-	TrimSpace = function(s) {
-		var {$24r, $24r$1, _r, _r$1, c, c$1, s, start, stop, $s, $r, $c} = $restore(this, {s});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		start = 0;
-		/* while (true) { */ case 1:
-			/* if (!(start < s.length)) { break; } */ if(!(start < s.length)) { $s = 2; continue; }
-			c = s.charCodeAt(start);
-			/* */ if (c >= 128) { $s = 3; continue; }
-			/* */ $s = 4; continue;
-			/* if (c >= 128) { */ case 3:
-				_r = TrimFunc($substring(s, start), unicode.IsSpace); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-				$24r = _r;
-				$s = 6; case 6: return $24r;
-			/* } */ case 4:
-			if (((c < 0 || c >= asciiSpace.length) ? ($throwRuntimeError("index out of range"), undefined) : asciiSpace[c]) === 0) {
-				/* break; */ $s = 2; continue;
-			}
-			start = start + (1) >> 0;
-		$s = 1; continue;
-		case 2:
-		stop = s.length;
-		/* while (true) { */ case 7:
-			/* if (!(stop > start)) { break; } */ if(!(stop > start)) { $s = 8; continue; }
-			c$1 = s.charCodeAt((stop - 1 >> 0));
-			/* */ if (c$1 >= 128) { $s = 9; continue; }
-			/* */ $s = 10; continue;
-			/* if (c$1 >= 128) { */ case 9:
-				_r$1 = TrimFunc($substring(s, start, stop), unicode.IsSpace); /* */ $s = 11; case 11: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
-				$24r$1 = _r$1;
-				$s = 12; case 12: return $24r$1;
-			/* } */ case 10:
-			if (((c$1 < 0 || c$1 >= asciiSpace.length) ? ($throwRuntimeError("index out of range"), undefined) : asciiSpace[c$1]) === 0) {
-				/* break; */ $s = 8; continue;
-			}
-			stop = stop - (1) >> 0;
-		$s = 7; continue;
-		case 8:
-		$s = -1; return $substring(s, start, stop);
-		/* */ } return; } var $f = {$blk: TrimSpace, $c: true, $r, $24r, $24r$1, _r, _r$1, c, c$1, s, start, stop, $s};return $f;
-	};
-	$pkg.TrimSpace = TrimSpace;
-	Replace = function(s, old, new$1, n) {
-		var _tuple, b, i, j, m, n, new$1, old, s, start, wid;
-		if (old === new$1 || (n === 0)) {
-			return s;
-		}
-		m = Count(s, old);
-		if (m === 0) {
-			return s;
-		} else if (n < 0 || m < n) {
-			n = m;
-		}
-		b = new Builder.ptr(ptrType$1.nil, sliceType$2.nil);
-		b.Grow(s.length + ($imul(n, ((new$1.length - old.length >> 0)))) >> 0);
-		start = 0;
-		i = 0;
-		while (true) {
-			if (!(i < n)) { break; }
-			j = start;
-			if (old.length === 0) {
-				if (i > 0) {
-					_tuple = utf8.DecodeRuneInString($substring(s, start));
-					wid = _tuple[1];
-					j = j + (wid) >> 0;
-				}
-			} else {
-				j = j + (Index($substring(s, start), old)) >> 0;
-			}
-			b.WriteString($substring(s, start, j));
-			b.WriteString(new$1);
-			start = j + old.length >> 0;
-			i = i + (1) >> 0;
-		}
-		b.WriteString($substring(s, start));
-		return b.String();
-	};
-	$pkg.Replace = Replace;
-	Cut = function(s, sep) {
-		var _tmp, _tmp$1, _tmp$2, _tmp$3, _tmp$4, _tmp$5, after, before, found, i, s, sep;
-		before = "";
-		after = "";
-		found = false;
-		i = Index(s, sep);
-		if (i >= 0) {
-			_tmp = $substring(s, 0, i);
-			_tmp$1 = $substring(s, (i + sep.length >> 0));
-			_tmp$2 = true;
-			before = _tmp;
-			after = _tmp$1;
-			found = _tmp$2;
-			return [before, after, found];
-		}
-		_tmp$3 = s;
-		_tmp$4 = "";
-		_tmp$5 = false;
-		before = _tmp$3;
-		after = _tmp$4;
-		found = _tmp$5;
-		return [before, after, found];
-	};
-	$pkg.Cut = Cut;
-	IndexByte = function(s, c) {
-		var c, s;
-		return $parseInt(s.indexOf($global.String.fromCharCode(c))) >> 0;
-	};
-	$pkg.IndexByte = IndexByte;
-	Index = function(s, sep) {
-		var s, sep;
-		return $parseInt(s.indexOf(sep)) >> 0;
-	};
-	$pkg.Index = Index;
-	LastIndex = function(s, sep) {
-		var s, sep;
-		return $parseInt(s.lastIndexOf(sep)) >> 0;
-	};
-	$pkg.LastIndex = LastIndex;
-	Count = function(s, sep) {
-		var n, pos, s, sep;
-		n = 0;
-		if ((sep.length === 0)) {
-			return utf8.RuneCountInString(s) + 1 >> 0;
-		} else if (sep.length > s.length) {
-			return 0;
-		} else if ((sep.length === s.length)) {
-			if (sep === s) {
-				return 1;
-			}
-			return 0;
-		}
-		while (true) {
-			pos = Index(s, sep);
-			if (pos === -1) {
-				break;
-			}
-			n = n + (1) >> 0;
-			s = $substring(s, (pos + sep.length >> 0));
-		}
-		return n;
-	};
-	$pkg.Count = Count;
-	Builder.ptr.prototype.String = function() {
-		var b;
-		b = this;
-		return ($bytesToString(b.buf));
-	};
-	Builder.prototype.String = function() { return this.$val.String(); };
-	Builder.ptr.prototype.copyCheck = function() {
-		var b;
-		b = this;
-		if (b.addr === ptrType$1.nil) {
-			b.addr = b;
-		} else if (!(b.addr === b)) {
-			$panic(new $String("strings: illegal use of non-zero Builder copied by value"));
-		}
-	};
-	Builder.prototype.copyCheck = function() { return this.$val.copyCheck(); };
-	Builder.ptr.prototype.Len = function() {
-		var b;
-		b = this;
-		return b.buf.$length;
-	};
-	Builder.prototype.Len = function() { return this.$val.Len(); };
-	Builder.ptr.prototype.Cap = function() {
-		var b;
-		b = this;
-		return b.buf.$capacity;
-	};
-	Builder.prototype.Cap = function() { return this.$val.Cap(); };
-	Builder.ptr.prototype.Reset = function() {
-		var b;
-		b = this;
-		b.addr = ptrType$1.nil;
-		b.buf = sliceType$2.nil;
-	};
-	Builder.prototype.Reset = function() { return this.$val.Reset(); };
-	Builder.ptr.prototype.grow = function(n) {
-		var b, buf, n;
-		b = this;
-		buf = $makeSlice(sliceType$2, b.buf.$length, (($imul(2, b.buf.$capacity)) + n >> 0));
-		$copySlice(buf, b.buf);
-		b.buf = buf;
-	};
-	Builder.prototype.grow = function(n) { return this.$val.grow(n); };
-	Builder.ptr.prototype.Grow = function(n) {
-		var b, n;
-		b = this;
-		b.copyCheck();
-		if (n < 0) {
-			$panic(new $String("strings.Builder.Grow: negative count"));
-		}
-		if ((b.buf.$capacity - b.buf.$length >> 0) < n) {
-			b.grow(n);
-		}
-	};
-	Builder.prototype.Grow = function(n) { return this.$val.Grow(n); };
-	Builder.ptr.prototype.Write = function(p) {
-		var b, p;
-		b = this;
-		b.copyCheck();
-		b.buf = $appendSlice(b.buf, p);
-		return [p.$length, $ifaceNil];
-	};
-	Builder.prototype.Write = function(p) { return this.$val.Write(p); };
-	Builder.ptr.prototype.WriteByte = function(c) {
-		var b, c;
-		b = this;
-		b.copyCheck();
-		b.buf = $append(b.buf, c);
-		return $ifaceNil;
-	};
-	Builder.prototype.WriteByte = function(c) { return this.$val.WriteByte(c); };
-	Builder.ptr.prototype.WriteRune = function(r) {
-		var b, l, n, r;
-		b = this;
-		b.copyCheck();
-		if (((r >>> 0)) < 128) {
-			b.buf = $append(b.buf, ((r << 24 >>> 24)));
-			return [1, $ifaceNil];
-		}
-		l = b.buf.$length;
-		if ((b.buf.$capacity - l >> 0) < 4) {
-			b.grow(4);
-		}
-		n = utf8.EncodeRune($subslice(b.buf, l, (l + 4 >> 0)), r);
-		b.buf = $subslice(b.buf, 0, (l + n >> 0));
-		return [n, $ifaceNil];
-	};
-	Builder.prototype.WriteRune = function(r) { return this.$val.WriteRune(r); };
-	Builder.ptr.prototype.WriteString = function(s) {
-		var b, s;
-		b = this;
-		b.copyCheck();
-		b.buf = $appendSlice(b.buf, s);
-		return [s.length, $ifaceNil];
-	};
-	Builder.prototype.WriteString = function(s) { return this.$val.WriteString(s); };
-	ptrType.methods = [{prop: "contains", name: "contains", pkg: "strings", typ: $funcType([$Uint8], [$Bool], false)}];
-	ptrType$1.methods = [{prop: "String", name: "String", pkg: "", typ: $funcType([], [$String], false)}, {prop: "copyCheck", name: "copyCheck", pkg: "strings", typ: $funcType([], [], false)}, {prop: "Len", name: "Len", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Cap", name: "Cap", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Reset", name: "Reset", pkg: "", typ: $funcType([], [], false)}, {prop: "grow", name: "grow", pkg: "strings", typ: $funcType([$Int], [], false)}, {prop: "Grow", name: "Grow", pkg: "", typ: $funcType([$Int], [], false)}, {prop: "Write", name: "Write", pkg: "", typ: $funcType([sliceType$2], [$Int, $error], false)}, {prop: "WriteByte", name: "WriteByte", pkg: "", typ: $funcType([$Uint8], [$error], false)}, {prop: "WriteRune", name: "WriteRune", pkg: "", typ: $funcType([$Int32], [$Int, $error], false)}, {prop: "WriteString", name: "WriteString", pkg: "", typ: $funcType([$String], [$Int, $error], false)}];
-	asciiSet.init($Uint32, 8);
-	Builder.init("strings", [{prop: "addr", name: "addr", embedded: false, exported: false, typ: ptrType$1, tag: ""}, {prop: "buf", name: "buf", embedded: false, exported: false, typ: sliceType$2, tag: ""}]);
-	$init = function() {
-		$pkg.$init = function() {};
-		/* */ var $f, $c = false, $s = 0, $r; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
-		$r = errors.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = js.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = bytealg.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = io.$init(); /* */ $s = 4; case 4: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = sync.$init(); /* */ $s = 5; case 5: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = unicode.$init(); /* */ $s = 6; case 6: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = utf8.$init(); /* */ $s = 7; case 7: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		asciiSpace = $toNativeArray($kindUint8, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
-		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
-	};
-	$pkg.$init = $init;
-	return $pkg;
-})();
-$packages["bufio"] = (function() {
-	var $pkg = {}, $init, bytes, errors, io, strings, utf8, Scanner, SplitFunc, sliceType, ptrType$3, errNegativeRead, errNegativeWrite, NewScanner, dropCR, ScanLines;
-	bytes = $packages["bytes"];
-	errors = $packages["errors"];
-	io = $packages["io"];
-	strings = $packages["strings"];
-	utf8 = $packages["unicode/utf8"];
-	Scanner = $pkg.Scanner = $newType(0, $kindStruct, "bufio.Scanner", true, "bufio", true, function(r_, split_, maxTokenSize_, token_, buf_, start_, end_, err_, empties_, scanCalled_, done_) {
-		this.$val = this;
-		if (arguments.length === 0) {
-			this.r = $ifaceNil;
-			this.split = $throwNilPointerError;
-			this.maxTokenSize = 0;
-			this.token = sliceType.nil;
-			this.buf = sliceType.nil;
-			this.start = 0;
-			this.end = 0;
-			this.err = $ifaceNil;
-			this.empties = 0;
-			this.scanCalled = false;
-			this.done = false;
-			return;
-		}
-		this.r = r_;
-		this.split = split_;
-		this.maxTokenSize = maxTokenSize_;
-		this.token = token_;
-		this.buf = buf_;
-		this.start = start_;
-		this.end = end_;
-		this.err = err_;
-		this.empties = empties_;
-		this.scanCalled = scanCalled_;
-		this.done = done_;
-	});
-	SplitFunc = $pkg.SplitFunc = $newType(4, $kindFunc, "bufio.SplitFunc", true, "bufio", true, null);
-	sliceType = $sliceType($Uint8);
-	ptrType$3 = $ptrType(Scanner);
-	NewScanner = function(r) {
-		var r;
-		return new Scanner.ptr(r, ScanLines, 65536, sliceType.nil, sliceType.nil, 0, 0, $ifaceNil, 0, false, false);
-	};
-	$pkg.NewScanner = NewScanner;
-	Scanner.ptr.prototype.Err = function() {
-		var s;
-		s = this;
-		if ($interfaceIsEqual(s.err, io.EOF)) {
-			return $ifaceNil;
-		}
-		return s.err;
-	};
-	Scanner.prototype.Err = function() { return this.$val.Err(); };
-	Scanner.ptr.prototype.Bytes = function() {
-		var s;
-		s = this;
-		return s.token;
-	};
-	Scanner.prototype.Bytes = function() { return this.$val.Bytes(); };
-	Scanner.ptr.prototype.Text = function() {
-		var s;
-		s = this;
-		return ($bytesToString(s.token));
-	};
-	Scanner.prototype.Text = function() { return this.$val.Text(); };
-	Scanner.ptr.prototype.Scan = function() {
-		var {_q, _r, _r$1, _tuple, _tuple$1, advance, err, err$1, loop, n, newBuf, newSize, s, token, $s, $r, $c} = $restore(this, {});
-		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		s = this;
-		if (s.done) {
-			$s = -1; return false;
-		}
-		s.scanCalled = true;
-		/* while (true) { */ case 1:
-			/* */ if (s.end > s.start || !($interfaceIsEqual(s.err, $ifaceNil))) { $s = 3; continue; }
-			/* */ $s = 4; continue;
-			/* if (s.end > s.start || !($interfaceIsEqual(s.err, $ifaceNil))) { */ case 3:
-				_r = s.split($subslice(s.buf, s.start, s.end), !($interfaceIsEqual(s.err, $ifaceNil))); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
-				_tuple = _r;
-				advance = _tuple[0];
-				token = _tuple[1];
-				err = _tuple[2];
-				if (!($interfaceIsEqual(err, $ifaceNil))) {
-					if ($interfaceIsEqual(err, $pkg.ErrFinalToken)) {
-						s.token = token;
-						s.done = true;
-						$s = -1; return true;
-					}
-					s.setErr(err);
-					$s = -1; return false;
-				}
-				if (!s.advance(advance)) {
-					$s = -1; return false;
-				}
-				s.token = token;
-				if (!(token === sliceType.nil)) {
-					if ($interfaceIsEqual(s.err, $ifaceNil) || advance > 0) {
-						s.empties = 0;
-					} else {
-						s.empties = s.empties + (1) >> 0;
-						if (s.empties > 100) {
-							$panic(new $String("bufio.Scan: too many empty tokens without progressing"));
-						}
-					}
-					$s = -1; return true;
-				}
-			/* } */ case 4:
-			if (!($interfaceIsEqual(s.err, $ifaceNil))) {
-				s.start = 0;
-				s.end = 0;
-				$s = -1; return false;
-			}
-			if (s.start > 0 && ((s.end === s.buf.$length) || s.start > (_q = s.buf.$length / 2, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >> 0 : $throwRuntimeError("integer divide by zero")))) {
-				$copySlice(s.buf, $subslice(s.buf, s.start, s.end));
-				s.end = s.end - (s.start) >> 0;
-				s.start = 0;
-			}
-			if (s.end === s.buf.$length) {
-				if (s.buf.$length >= s.maxTokenSize || s.buf.$length > 1073741823) {
-					s.setErr($pkg.ErrTooLong);
-					$s = -1; return false;
-				}
-				newSize = $imul(s.buf.$length, 2);
-				if (newSize === 0) {
-					newSize = 4096;
-				}
-				if (newSize > s.maxTokenSize) {
-					newSize = s.maxTokenSize;
-				}
-				newBuf = $makeSlice(sliceType, newSize);
-				$copySlice(newBuf, $subslice(s.buf, s.start, s.end));
-				s.buf = newBuf;
-				s.end = s.end - (s.start) >> 0;
-				s.start = 0;
-			}
-			loop = 0;
-			/* while (true) { */ case 6:
-				_r$1 = s.r.Read($subslice(s.buf, s.end, s.buf.$length)); /* */ $s = 8; case 8: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
-				_tuple$1 = _r$1;
-				n = _tuple$1[0];
-				err$1 = _tuple$1[1];
-				if (n < 0 || (s.buf.$length - s.end >> 0) < n) {
-					s.setErr($pkg.ErrBadReadCount);
-					/* break; */ $s = 7; continue;
-				}
-				s.end = s.end + (n) >> 0;
-				if (!($interfaceIsEqual(err$1, $ifaceNil))) {
-					s.setErr(err$1);
-					/* break; */ $s = 7; continue;
-				}
-				if (n > 0) {
-					s.empties = 0;
-					/* break; */ $s = 7; continue;
-				}
-				loop = loop + (1) >> 0;
-				if (loop > 100) {
-					s.setErr(io.ErrNoProgress);
-					/* break; */ $s = 7; continue;
-				}
-			$s = 6; continue;
-			case 7:
-		$s = 1; continue;
-		case 2:
-		$s = -1; return false;
-		/* */ } return; } var $f = {$blk: Scanner.ptr.prototype.Scan, $c: true, $r, _q, _r, _r$1, _tuple, _tuple$1, advance, err, err$1, loop, n, newBuf, newSize, s, token, $s};return $f;
-	};
-	Scanner.prototype.Scan = function() { return this.$val.Scan(); };
-	Scanner.ptr.prototype.advance = function(n) {
-		var n, s;
-		s = this;
-		if (n < 0) {
-			s.setErr($pkg.ErrNegativeAdvance);
-			return false;
-		}
-		if (n > (s.end - s.start >> 0)) {
-			s.setErr($pkg.ErrAdvanceTooFar);
-			return false;
-		}
-		s.start = s.start + (n) >> 0;
-		return true;
-	};
-	Scanner.prototype.advance = function(n) { return this.$val.advance(n); };
-	Scanner.ptr.prototype.setErr = function(err) {
-		var err, s;
-		s = this;
-		if ($interfaceIsEqual(s.err, $ifaceNil) || $interfaceIsEqual(s.err, io.EOF)) {
-			s.err = err;
-		}
-	};
-	Scanner.prototype.setErr = function(err) { return this.$val.setErr(err); };
-	Scanner.ptr.prototype.Buffer = function(buf, max) {
-		var buf, max, s;
-		s = this;
-		if (s.scanCalled) {
-			$panic(new $String("Buffer called after Scan"));
-		}
-		s.buf = $subslice(buf, 0, buf.$capacity);
-		s.maxTokenSize = max;
-	};
-	Scanner.prototype.Buffer = function(buf, max) { return this.$val.Buffer(buf, max); };
-	Scanner.ptr.prototype.Split = function(split) {
-		var s, split;
-		s = this;
-		if (s.scanCalled) {
-			$panic(new $String("Split called after Scan"));
-		}
-		s.split = split;
-	};
-	Scanner.prototype.Split = function(split) { return this.$val.Split(split); };
-	dropCR = function(data) {
-		var data, x;
-		if (data.$length > 0 && ((x = data.$length - 1 >> 0, ((x < 0 || x >= data.$length) ? ($throwRuntimeError("index out of range"), undefined) : data.$array[data.$offset + x])) === 13)) {
-			return $subslice(data, 0, (data.$length - 1 >> 0));
-		}
-		return data;
-	};
-	ScanLines = function(data, atEOF) {
-		var _tmp, _tmp$1, _tmp$10, _tmp$11, _tmp$2, _tmp$3, _tmp$4, _tmp$5, _tmp$6, _tmp$7, _tmp$8, _tmp$9, advance, atEOF, data, err, i, token;
-		advance = 0;
-		token = sliceType.nil;
-		err = $ifaceNil;
-		if (atEOF && (data.$length === 0)) {
-			_tmp = 0;
-			_tmp$1 = sliceType.nil;
-			_tmp$2 = $ifaceNil;
-			advance = _tmp;
-			token = _tmp$1;
-			err = _tmp$2;
-			return [advance, token, err];
-		}
-		i = bytes.IndexByte(data, 10);
-		if (i >= 0) {
-			_tmp$3 = i + 1 >> 0;
-			_tmp$4 = dropCR($subslice(data, 0, i));
-			_tmp$5 = $ifaceNil;
-			advance = _tmp$3;
-			token = _tmp$4;
-			err = _tmp$5;
-			return [advance, token, err];
-		}
-		if (atEOF) {
-			_tmp$6 = data.$length;
-			_tmp$7 = dropCR(data);
-			_tmp$8 = $ifaceNil;
-			advance = _tmp$6;
-			token = _tmp$7;
-			err = _tmp$8;
-			return [advance, token, err];
-		}
-		_tmp$9 = 0;
-		_tmp$10 = sliceType.nil;
-		_tmp$11 = $ifaceNil;
-		advance = _tmp$9;
-		token = _tmp$10;
-		err = _tmp$11;
-		return [advance, token, err];
-	};
-	$pkg.ScanLines = ScanLines;
-	ptrType$3.methods = [{prop: "Err", name: "Err", pkg: "", typ: $funcType([], [$error], false)}, {prop: "Bytes", name: "Bytes", pkg: "", typ: $funcType([], [sliceType], false)}, {prop: "Text", name: "Text", pkg: "", typ: $funcType([], [$String], false)}, {prop: "Scan", name: "Scan", pkg: "", typ: $funcType([], [$Bool], false)}, {prop: "advance", name: "advance", pkg: "bufio", typ: $funcType([$Int], [$Bool], false)}, {prop: "setErr", name: "setErr", pkg: "bufio", typ: $funcType([$error], [], false)}, {prop: "Buffer", name: "Buffer", pkg: "", typ: $funcType([sliceType, $Int], [], false)}, {prop: "Split", name: "Split", pkg: "", typ: $funcType([SplitFunc], [], false)}];
-	Scanner.init("bufio", [{prop: "r", name: "r", embedded: false, exported: false, typ: io.Reader, tag: ""}, {prop: "split", name: "split", embedded: false, exported: false, typ: SplitFunc, tag: ""}, {prop: "maxTokenSize", name: "maxTokenSize", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "token", name: "token", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "buf", name: "buf", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "start", name: "start", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "end", name: "end", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "err", name: "err", embedded: false, exported: false, typ: $error, tag: ""}, {prop: "empties", name: "empties", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "scanCalled", name: "scanCalled", embedded: false, exported: false, typ: $Bool, tag: ""}, {prop: "done", name: "done", embedded: false, exported: false, typ: $Bool, tag: ""}]);
-	SplitFunc.init([sliceType, $Bool], [$Int, sliceType, $error], false);
-	$init = function() {
-		$pkg.$init = function() {};
-		/* */ var $f, $c = false, $s = 0, $r; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
-		$r = bytes.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = errors.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = io.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = strings.$init(); /* */ $s = 4; case 4: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = utf8.$init(); /* */ $s = 5; case 5: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$pkg.ErrTooLong = errors.New("bufio.Scanner: token too long");
-		$pkg.ErrNegativeAdvance = errors.New("bufio.Scanner: SplitFunc returns negative advance count");
-		$pkg.ErrAdvanceTooFar = errors.New("bufio.Scanner: SplitFunc returns advance count beyond input");
-		$pkg.ErrBadReadCount = errors.New("bufio.Scanner: Read returned impossible count");
-		$pkg.ErrFinalToken = errors.New("final token");
-		$pkg.ErrInvalidUnreadByte = errors.New("bufio: invalid use of UnreadByte");
-		$pkg.ErrInvalidUnreadRune = errors.New("bufio: invalid use of UnreadRune");
-		$pkg.ErrBufferFull = errors.New("bufio: buffer full");
-		$pkg.ErrNegativeCount = errors.New("bufio: negative count");
-		errNegativeRead = errors.New("bufio: reader returned negative count from Read");
-		errNegativeWrite = errors.New("bufio: writer returned negative count from Write");
 		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
 	};
 	$pkg.$init = $init;
@@ -28803,6 +28073,946 @@ $packages["fmt"] = (function() {
 	$pkg.$init = $init;
 	return $pkg;
 })();
+$packages["strings"] = (function() {
+	var $pkg = {}, $init, errors, js, bytealg, io, sync, unicode, utf8, asciiSet, Builder, sliceType, ptrType, ptrType$1, sliceType$2, arrayType, asciiSpace, explode, Contains, ContainsAny, ContainsRune, IndexRune, IndexAny, genSplit, Split, HasPrefix, Map, TrimLeftFunc, TrimRightFunc, TrimFunc, indexFunc, lastIndexFunc, makeASCIISet, TrimLeft, trimLeftByte, trimLeftASCII, trimLeftUnicode, TrimSpace, Replace, Cut, IndexByte, Index, LastIndex, Count;
+	errors = $packages["errors"];
+	js = $packages["github.com/gopherjs/gopherjs/js"];
+	bytealg = $packages["internal/bytealg"];
+	io = $packages["io"];
+	sync = $packages["sync"];
+	unicode = $packages["unicode"];
+	utf8 = $packages["unicode/utf8"];
+	asciiSet = $pkg.asciiSet = $newType(32, $kindArray, "strings.asciiSet", true, "strings", false, null);
+	Builder = $pkg.Builder = $newType(0, $kindStruct, "strings.Builder", true, "strings", true, function(addr_, buf_) {
+		this.$val = this;
+		if (arguments.length === 0) {
+			this.addr = ptrType$1.nil;
+			this.buf = sliceType$2.nil;
+			return;
+		}
+		this.addr = addr_;
+		this.buf = buf_;
+	});
+	sliceType = $sliceType($String);
+	ptrType = $ptrType(asciiSet);
+	ptrType$1 = $ptrType(Builder);
+	sliceType$2 = $sliceType($Uint8);
+	arrayType = $arrayType($Uint32, 8);
+	explode = function(s, n) {
+		var _tuple, a, ch, i, l, n, s, size, x;
+		l = utf8.RuneCountInString(s);
+		if (n < 0 || n > l) {
+			n = l;
+		}
+		a = $makeSlice(sliceType, n);
+		i = 0;
+		while (true) {
+			if (!(i < (n - 1 >> 0))) { break; }
+			_tuple = utf8.DecodeRuneInString(s);
+			ch = _tuple[0];
+			size = _tuple[1];
+			((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = $substring(s, 0, size));
+			s = $substring(s, size);
+			if (ch === 65533) {
+				((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = "\xEF\xBF\xBD");
+			}
+			i = i + (1) >> 0;
+		}
+		if (n > 0) {
+			(x = n - 1 >> 0, ((x < 0 || x >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + x] = s));
+		}
+		return a;
+	};
+	Contains = function(s, substr) {
+		var s, substr;
+		return Index(s, substr) >= 0;
+	};
+	$pkg.Contains = Contains;
+	ContainsAny = function(s, chars) {
+		var chars, s;
+		return IndexAny(s, chars) >= 0;
+	};
+	$pkg.ContainsAny = ContainsAny;
+	ContainsRune = function(s, r) {
+		var r, s;
+		return IndexRune(s, r) >= 0;
+	};
+	$pkg.ContainsRune = ContainsRune;
+	IndexRune = function(s, r) {
+		var _i, _ref, _rune, i, r, r$1, s;
+		if (0 <= r && r < 128) {
+			return IndexByte(s, ((r << 24 >>> 24)));
+		} else if ((r === 65533)) {
+			_ref = s;
+			_i = 0;
+			while (true) {
+				if (!(_i < _ref.length)) { break; }
+				_rune = $decodeRune(_ref, _i);
+				i = _i;
+				r$1 = _rune[0];
+				if (r$1 === 65533) {
+					return i;
+				}
+				_i += _rune[1];
+			}
+			return -1;
+		} else if (!utf8.ValidRune(r)) {
+			return -1;
+		} else {
+			return Index(s, ($encodeRune(r)));
+		}
+	};
+	$pkg.IndexRune = IndexRune;
+	IndexAny = function(s, chars) {
+		var _i, _ref, _rune, _tuple, as, c, chars, i, i$1, isASCII, r, s;
+		if (chars === "") {
+			return -1;
+		}
+		if (chars.length === 1) {
+			r = ((chars.charCodeAt(0) >> 0));
+			if (r >= 128) {
+				r = 65533;
+			}
+			return IndexRune(s, r);
+		}
+		if (s.length > 8) {
+			_tuple = makeASCIISet(chars);
+			as = $clone(_tuple[0], asciiSet);
+			isASCII = _tuple[1];
+			if (isASCII) {
+				i = 0;
+				while (true) {
+					if (!(i < s.length)) { break; }
+					if (new ptrType(as).contains(s.charCodeAt(i))) {
+						return i;
+					}
+					i = i + (1) >> 0;
+				}
+				return -1;
+			}
+		}
+		_ref = s;
+		_i = 0;
+		while (true) {
+			if (!(_i < _ref.length)) { break; }
+			_rune = $decodeRune(_ref, _i);
+			i$1 = _i;
+			c = _rune[0];
+			if (IndexRune(chars, c) >= 0) {
+				return i$1;
+			}
+			_i += _rune[1];
+		}
+		return -1;
+	};
+	$pkg.IndexAny = IndexAny;
+	genSplit = function(s, sep, sepSave, n) {
+		var a, i, m, n, s, sep, sepSave;
+		if (n === 0) {
+			return sliceType.nil;
+		}
+		if (sep === "") {
+			return explode(s, n);
+		}
+		if (n < 0) {
+			n = Count(s, sep) + 1 >> 0;
+		}
+		a = $makeSlice(sliceType, n);
+		n = n - (1) >> 0;
+		i = 0;
+		while (true) {
+			if (!(i < n)) { break; }
+			m = Index(s, sep);
+			if (m < 0) {
+				break;
+			}
+			((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = $substring(s, 0, (m + sepSave >> 0)));
+			s = $substring(s, (m + sep.length >> 0));
+			i = i + (1) >> 0;
+		}
+		((i < 0 || i >= a.$length) ? ($throwRuntimeError("index out of range"), undefined) : a.$array[a.$offset + i] = s);
+		return $subslice(a, 0, (i + 1 >> 0));
+	};
+	Split = function(s, sep) {
+		var s, sep;
+		return genSplit(s, sep, 0, -1);
+	};
+	$pkg.Split = Split;
+	HasPrefix = function(s, prefix) {
+		var prefix, s;
+		return s.length >= prefix.length && $substring(s, 0, prefix.length) === prefix;
+	};
+	$pkg.HasPrefix = HasPrefix;
+	Map = function(mapping, s) {
+		var {_i, _i$1, _r, _r$1, _ref, _ref$1, _rune, _rune$1, _tuple, b, c, c$1, i, mapping, r, r$1, s, width, $s, $r, $c} = $restore(this, {mapping, s});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		b = new Builder.ptr(ptrType$1.nil, sliceType$2.nil);
+		_ref = s;
+		_i = 0;
+		/* while (true) { */ case 1:
+			/* if (!(_i < _ref.length)) { break; } */ if(!(_i < _ref.length)) { $s = 2; continue; }
+			_rune = $decodeRune(_ref, _i);
+			i = _i;
+			c = _rune[0];
+			_r = mapping(c); /* */ $s = 3; case 3: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+			r = _r;
+			if ((r === c) && !((c === 65533))) {
+				_i += _rune[1];
+				/* continue; */ $s = 1; continue;
+			}
+			width = 0;
+			if (c === 65533) {
+				_tuple = utf8.DecodeRuneInString($substring(s, i));
+				c = _tuple[0];
+				width = _tuple[1];
+				if (!((width === 1)) && (r === c)) {
+					_i += _rune[1];
+					/* continue; */ $s = 1; continue;
+				}
+			} else {
+				width = utf8.RuneLen(c);
+			}
+			b.Grow(s.length + 4 >> 0);
+			b.WriteString($substring(s, 0, i));
+			if (r >= 0) {
+				b.WriteRune(r);
+			}
+			s = $substring(s, (i + width >> 0));
+			/* break; */ $s = 2; continue;
+		case 2:
+		if (b.Cap() === 0) {
+			$s = -1; return s;
+		}
+		_ref$1 = s;
+		_i$1 = 0;
+		/* while (true) { */ case 4:
+			/* if (!(_i$1 < _ref$1.length)) { break; } */ if(!(_i$1 < _ref$1.length)) { $s = 5; continue; }
+			_rune$1 = $decodeRune(_ref$1, _i$1);
+			c$1 = _rune$1[0];
+			_r$1 = mapping(c$1); /* */ $s = 6; case 6: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+			r$1 = _r$1;
+			if (r$1 >= 0) {
+				if (r$1 < 128) {
+					b.WriteByte(((r$1 << 24 >>> 24)));
+				} else {
+					b.WriteRune(r$1);
+				}
+			}
+			_i$1 += _rune$1[1];
+		$s = 4; continue;
+		case 5:
+		$s = -1; return b.String();
+		/* */ } return; } var $f = {$blk: Map, $c: true, $r, _i, _i$1, _r, _r$1, _ref, _ref$1, _rune, _rune$1, _tuple, b, c, c$1, i, mapping, r, r$1, s, width, $s};return $f;
+	};
+	$pkg.Map = Map;
+	TrimLeftFunc = function(s, f) {
+		var {_r, f, i, s, $s, $r, $c} = $restore(this, {s, f});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		_r = indexFunc(s, f, false); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		i = _r;
+		if (i === -1) {
+			$s = -1; return "";
+		}
+		$s = -1; return $substring(s, i);
+		/* */ } return; } var $f = {$blk: TrimLeftFunc, $c: true, $r, _r, f, i, s, $s};return $f;
+	};
+	$pkg.TrimLeftFunc = TrimLeftFunc;
+	TrimRightFunc = function(s, f) {
+		var {_r, _tuple, f, i, s, wid, $s, $r, $c} = $restore(this, {s, f});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		_r = lastIndexFunc(s, f, false); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		i = _r;
+		if (i >= 0 && s.charCodeAt(i) >= 128) {
+			_tuple = utf8.DecodeRuneInString($substring(s, i));
+			wid = _tuple[1];
+			i = i + (wid) >> 0;
+		} else {
+			i = i + (1) >> 0;
+		}
+		$s = -1; return $substring(s, 0, i);
+		/* */ } return; } var $f = {$blk: TrimRightFunc, $c: true, $r, _r, _tuple, f, i, s, wid, $s};return $f;
+	};
+	$pkg.TrimRightFunc = TrimRightFunc;
+	TrimFunc = function(s, f) {
+		var {$24r, _r, _r$1, f, s, $s, $r, $c} = $restore(this, {s, f});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		_r = TrimLeftFunc(s, f); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		_r$1 = TrimRightFunc(_r, f); /* */ $s = 2; case 2: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+		$24r = _r$1;
+		$s = 3; case 3: return $24r;
+		/* */ } return; } var $f = {$blk: TrimFunc, $c: true, $r, $24r, _r, _r$1, f, s, $s};return $f;
+	};
+	$pkg.TrimFunc = TrimFunc;
+	indexFunc = function(s, f, truth) {
+		var {_i, _r, _ref, _rune, f, i, r, s, truth, $s, $r, $c} = $restore(this, {s, f, truth});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		_ref = s;
+		_i = 0;
+		/* while (true) { */ case 1:
+			/* if (!(_i < _ref.length)) { break; } */ if(!(_i < _ref.length)) { $s = 2; continue; }
+			_rune = $decodeRune(_ref, _i);
+			i = _i;
+			r = _rune[0];
+			_r = f(r); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+			/* */ if (_r === truth) { $s = 3; continue; }
+			/* */ $s = 4; continue;
+			/* if (_r === truth) { */ case 3:
+				$s = -1; return i;
+			/* } */ case 4:
+			_i += _rune[1];
+		$s = 1; continue;
+		case 2:
+		$s = -1; return -1;
+		/* */ } return; } var $f = {$blk: indexFunc, $c: true, $r, _i, _r, _ref, _rune, f, i, r, s, truth, $s};return $f;
+	};
+	lastIndexFunc = function(s, f, truth) {
+		var {_r, _tuple, f, i, r, s, size, truth, $s, $r, $c} = $restore(this, {s, f, truth});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		i = s.length;
+		/* while (true) { */ case 1:
+			/* if (!(i > 0)) { break; } */ if(!(i > 0)) { $s = 2; continue; }
+			_tuple = utf8.DecodeLastRuneInString($substring(s, 0, i));
+			r = _tuple[0];
+			size = _tuple[1];
+			i = i - (size) >> 0;
+			_r = f(r); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+			/* */ if (_r === truth) { $s = 3; continue; }
+			/* */ $s = 4; continue;
+			/* if (_r === truth) { */ case 3:
+				$s = -1; return i;
+			/* } */ case 4:
+		$s = 1; continue;
+		case 2:
+		$s = -1; return -1;
+		/* */ } return; } var $f = {$blk: lastIndexFunc, $c: true, $r, _r, _tuple, f, i, r, s, size, truth, $s};return $f;
+	};
+	makeASCIISet = function(chars) {
+		var _index, _q, _r, _tmp, _tmp$1, _tmp$2, _tmp$3, as, c, chars, i, ok, y;
+		as = arrayType.zero();
+		ok = false;
+		i = 0;
+		while (true) {
+			if (!(i < chars.length)) { break; }
+			c = chars.charCodeAt(i);
+			if (c >= 128) {
+				_tmp = $clone(as, asciiSet);
+				_tmp$1 = false;
+				asciiSet.copy(as, _tmp);
+				ok = _tmp$1;
+				return [as, ok];
+			}
+			_index = (_q = c / 32, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >>> 0 : $throwRuntimeError("integer divide by zero"));
+			((_index < 0 || _index >= as.length) ? ($throwRuntimeError("index out of range"), undefined) : as[_index] = ((((_index < 0 || _index >= as.length) ? ($throwRuntimeError("index out of range"), undefined) : as[_index]) | (((y = ((_r = c % 32, _r === _r ? _r : $throwRuntimeError("integer divide by zero"))), y < 32 ? (1 << y) : 0) >>> 0))) >>> 0));
+			i = i + (1) >> 0;
+		}
+		_tmp$2 = $clone(as, asciiSet);
+		_tmp$3 = true;
+		asciiSet.copy(as, _tmp$2);
+		ok = _tmp$3;
+		return [as, ok];
+	};
+	asciiSet.prototype.contains = function(c) {
+		var _q, _r, as, c, x, x$1, y;
+		as = this.$val;
+		return !((((((x = as, x$1 = (_q = c / 32, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >>> 0 : $throwRuntimeError("integer divide by zero")), ((x$1 < 0 || x$1 >= x.length) ? ($throwRuntimeError("index out of range"), undefined) : x[x$1])) & (((y = ((_r = c % 32, _r === _r ? _r : $throwRuntimeError("integer divide by zero"))), y < 32 ? (1 << y) : 0) >>> 0))) >>> 0)) === 0));
+	};
+	$ptrType(asciiSet).prototype.contains = function(c) { return (new asciiSet(this.$get())).contains(c); };
+	TrimLeft = function(s, cutset) {
+		var _tuple, as, cutset, ok, s;
+		if (s === "" || cutset === "") {
+			return s;
+		}
+		if ((cutset.length === 1) && cutset.charCodeAt(0) < 128) {
+			return trimLeftByte(s, cutset.charCodeAt(0));
+		}
+		_tuple = makeASCIISet(cutset);
+		as = $clone(_tuple[0], asciiSet);
+		ok = _tuple[1];
+		if (ok) {
+			return trimLeftASCII(s, as);
+		}
+		return trimLeftUnicode(s, cutset);
+	};
+	$pkg.TrimLeft = TrimLeft;
+	trimLeftByte = function(s, c) {
+		var c, s;
+		while (true) {
+			if (!(s.length > 0 && (s.charCodeAt(0) === c))) { break; }
+			s = $substring(s, 1);
+		}
+		return s;
+	};
+	trimLeftASCII = function(s, as) {
+		var as, s;
+		while (true) {
+			if (!(s.length > 0)) { break; }
+			if (!new ptrType(as).contains(s.charCodeAt(0))) {
+				break;
+			}
+			s = $substring(s, 1);
+		}
+		return s;
+	};
+	trimLeftUnicode = function(s, cutset) {
+		var _tmp, _tmp$1, _tuple, cutset, n, r, s;
+		while (true) {
+			if (!(s.length > 0)) { break; }
+			_tmp = ((s.charCodeAt(0) >> 0));
+			_tmp$1 = 1;
+			r = _tmp;
+			n = _tmp$1;
+			if (r >= 128) {
+				_tuple = utf8.DecodeRuneInString(s);
+				r = _tuple[0];
+				n = _tuple[1];
+			}
+			if (!ContainsRune(cutset, r)) {
+				break;
+			}
+			s = $substring(s, n);
+		}
+		return s;
+	};
+	TrimSpace = function(s) {
+		var {$24r, $24r$1, _r, _r$1, c, c$1, s, start, stop, $s, $r, $c} = $restore(this, {s});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		start = 0;
+		/* while (true) { */ case 1:
+			/* if (!(start < s.length)) { break; } */ if(!(start < s.length)) { $s = 2; continue; }
+			c = s.charCodeAt(start);
+			/* */ if (c >= 128) { $s = 3; continue; }
+			/* */ $s = 4; continue;
+			/* if (c >= 128) { */ case 3:
+				_r = TrimFunc($substring(s, start), unicode.IsSpace); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+				$24r = _r;
+				$s = 6; case 6: return $24r;
+			/* } */ case 4:
+			if (((c < 0 || c >= asciiSpace.length) ? ($throwRuntimeError("index out of range"), undefined) : asciiSpace[c]) === 0) {
+				/* break; */ $s = 2; continue;
+			}
+			start = start + (1) >> 0;
+		$s = 1; continue;
+		case 2:
+		stop = s.length;
+		/* while (true) { */ case 7:
+			/* if (!(stop > start)) { break; } */ if(!(stop > start)) { $s = 8; continue; }
+			c$1 = s.charCodeAt((stop - 1 >> 0));
+			/* */ if (c$1 >= 128) { $s = 9; continue; }
+			/* */ $s = 10; continue;
+			/* if (c$1 >= 128) { */ case 9:
+				_r$1 = TrimFunc($substring(s, start, stop), unicode.IsSpace); /* */ $s = 11; case 11: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+				$24r$1 = _r$1;
+				$s = 12; case 12: return $24r$1;
+			/* } */ case 10:
+			if (((c$1 < 0 || c$1 >= asciiSpace.length) ? ($throwRuntimeError("index out of range"), undefined) : asciiSpace[c$1]) === 0) {
+				/* break; */ $s = 8; continue;
+			}
+			stop = stop - (1) >> 0;
+		$s = 7; continue;
+		case 8:
+		$s = -1; return $substring(s, start, stop);
+		/* */ } return; } var $f = {$blk: TrimSpace, $c: true, $r, $24r, $24r$1, _r, _r$1, c, c$1, s, start, stop, $s};return $f;
+	};
+	$pkg.TrimSpace = TrimSpace;
+	Replace = function(s, old, new$1, n) {
+		var _tuple, b, i, j, m, n, new$1, old, s, start, wid;
+		if (old === new$1 || (n === 0)) {
+			return s;
+		}
+		m = Count(s, old);
+		if (m === 0) {
+			return s;
+		} else if (n < 0 || m < n) {
+			n = m;
+		}
+		b = new Builder.ptr(ptrType$1.nil, sliceType$2.nil);
+		b.Grow(s.length + ($imul(n, ((new$1.length - old.length >> 0)))) >> 0);
+		start = 0;
+		i = 0;
+		while (true) {
+			if (!(i < n)) { break; }
+			j = start;
+			if (old.length === 0) {
+				if (i > 0) {
+					_tuple = utf8.DecodeRuneInString($substring(s, start));
+					wid = _tuple[1];
+					j = j + (wid) >> 0;
+				}
+			} else {
+				j = j + (Index($substring(s, start), old)) >> 0;
+			}
+			b.WriteString($substring(s, start, j));
+			b.WriteString(new$1);
+			start = j + old.length >> 0;
+			i = i + (1) >> 0;
+		}
+		b.WriteString($substring(s, start));
+		return b.String();
+	};
+	$pkg.Replace = Replace;
+	Cut = function(s, sep) {
+		var _tmp, _tmp$1, _tmp$2, _tmp$3, _tmp$4, _tmp$5, after, before, found, i, s, sep;
+		before = "";
+		after = "";
+		found = false;
+		i = Index(s, sep);
+		if (i >= 0) {
+			_tmp = $substring(s, 0, i);
+			_tmp$1 = $substring(s, (i + sep.length >> 0));
+			_tmp$2 = true;
+			before = _tmp;
+			after = _tmp$1;
+			found = _tmp$2;
+			return [before, after, found];
+		}
+		_tmp$3 = s;
+		_tmp$4 = "";
+		_tmp$5 = false;
+		before = _tmp$3;
+		after = _tmp$4;
+		found = _tmp$5;
+		return [before, after, found];
+	};
+	$pkg.Cut = Cut;
+	IndexByte = function(s, c) {
+		var c, s;
+		return $parseInt(s.indexOf($global.String.fromCharCode(c))) >> 0;
+	};
+	$pkg.IndexByte = IndexByte;
+	Index = function(s, sep) {
+		var s, sep;
+		return $parseInt(s.indexOf(sep)) >> 0;
+	};
+	$pkg.Index = Index;
+	LastIndex = function(s, sep) {
+		var s, sep;
+		return $parseInt(s.lastIndexOf(sep)) >> 0;
+	};
+	$pkg.LastIndex = LastIndex;
+	Count = function(s, sep) {
+		var n, pos, s, sep;
+		n = 0;
+		if ((sep.length === 0)) {
+			return utf8.RuneCountInString(s) + 1 >> 0;
+		} else if (sep.length > s.length) {
+			return 0;
+		} else if ((sep.length === s.length)) {
+			if (sep === s) {
+				return 1;
+			}
+			return 0;
+		}
+		while (true) {
+			pos = Index(s, sep);
+			if (pos === -1) {
+				break;
+			}
+			n = n + (1) >> 0;
+			s = $substring(s, (pos + sep.length >> 0));
+		}
+		return n;
+	};
+	$pkg.Count = Count;
+	Builder.ptr.prototype.String = function() {
+		var b;
+		b = this;
+		return ($bytesToString(b.buf));
+	};
+	Builder.prototype.String = function() { return this.$val.String(); };
+	Builder.ptr.prototype.copyCheck = function() {
+		var b;
+		b = this;
+		if (b.addr === ptrType$1.nil) {
+			b.addr = b;
+		} else if (!(b.addr === b)) {
+			$panic(new $String("strings: illegal use of non-zero Builder copied by value"));
+		}
+	};
+	Builder.prototype.copyCheck = function() { return this.$val.copyCheck(); };
+	Builder.ptr.prototype.Len = function() {
+		var b;
+		b = this;
+		return b.buf.$length;
+	};
+	Builder.prototype.Len = function() { return this.$val.Len(); };
+	Builder.ptr.prototype.Cap = function() {
+		var b;
+		b = this;
+		return b.buf.$capacity;
+	};
+	Builder.prototype.Cap = function() { return this.$val.Cap(); };
+	Builder.ptr.prototype.Reset = function() {
+		var b;
+		b = this;
+		b.addr = ptrType$1.nil;
+		b.buf = sliceType$2.nil;
+	};
+	Builder.prototype.Reset = function() { return this.$val.Reset(); };
+	Builder.ptr.prototype.grow = function(n) {
+		var b, buf, n;
+		b = this;
+		buf = $makeSlice(sliceType$2, b.buf.$length, (($imul(2, b.buf.$capacity)) + n >> 0));
+		$copySlice(buf, b.buf);
+		b.buf = buf;
+	};
+	Builder.prototype.grow = function(n) { return this.$val.grow(n); };
+	Builder.ptr.prototype.Grow = function(n) {
+		var b, n;
+		b = this;
+		b.copyCheck();
+		if (n < 0) {
+			$panic(new $String("strings.Builder.Grow: negative count"));
+		}
+		if ((b.buf.$capacity - b.buf.$length >> 0) < n) {
+			b.grow(n);
+		}
+	};
+	Builder.prototype.Grow = function(n) { return this.$val.Grow(n); };
+	Builder.ptr.prototype.Write = function(p) {
+		var b, p;
+		b = this;
+		b.copyCheck();
+		b.buf = $appendSlice(b.buf, p);
+		return [p.$length, $ifaceNil];
+	};
+	Builder.prototype.Write = function(p) { return this.$val.Write(p); };
+	Builder.ptr.prototype.WriteByte = function(c) {
+		var b, c;
+		b = this;
+		b.copyCheck();
+		b.buf = $append(b.buf, c);
+		return $ifaceNil;
+	};
+	Builder.prototype.WriteByte = function(c) { return this.$val.WriteByte(c); };
+	Builder.ptr.prototype.WriteRune = function(r) {
+		var b, l, n, r;
+		b = this;
+		b.copyCheck();
+		if (((r >>> 0)) < 128) {
+			b.buf = $append(b.buf, ((r << 24 >>> 24)));
+			return [1, $ifaceNil];
+		}
+		l = b.buf.$length;
+		if ((b.buf.$capacity - l >> 0) < 4) {
+			b.grow(4);
+		}
+		n = utf8.EncodeRune($subslice(b.buf, l, (l + 4 >> 0)), r);
+		b.buf = $subslice(b.buf, 0, (l + n >> 0));
+		return [n, $ifaceNil];
+	};
+	Builder.prototype.WriteRune = function(r) { return this.$val.WriteRune(r); };
+	Builder.ptr.prototype.WriteString = function(s) {
+		var b, s;
+		b = this;
+		b.copyCheck();
+		b.buf = $appendSlice(b.buf, s);
+		return [s.length, $ifaceNil];
+	};
+	Builder.prototype.WriteString = function(s) { return this.$val.WriteString(s); };
+	ptrType.methods = [{prop: "contains", name: "contains", pkg: "strings", typ: $funcType([$Uint8], [$Bool], false)}];
+	ptrType$1.methods = [{prop: "String", name: "String", pkg: "", typ: $funcType([], [$String], false)}, {prop: "copyCheck", name: "copyCheck", pkg: "strings", typ: $funcType([], [], false)}, {prop: "Len", name: "Len", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Cap", name: "Cap", pkg: "", typ: $funcType([], [$Int], false)}, {prop: "Reset", name: "Reset", pkg: "", typ: $funcType([], [], false)}, {prop: "grow", name: "grow", pkg: "strings", typ: $funcType([$Int], [], false)}, {prop: "Grow", name: "Grow", pkg: "", typ: $funcType([$Int], [], false)}, {prop: "Write", name: "Write", pkg: "", typ: $funcType([sliceType$2], [$Int, $error], false)}, {prop: "WriteByte", name: "WriteByte", pkg: "", typ: $funcType([$Uint8], [$error], false)}, {prop: "WriteRune", name: "WriteRune", pkg: "", typ: $funcType([$Int32], [$Int, $error], false)}, {prop: "WriteString", name: "WriteString", pkg: "", typ: $funcType([$String], [$Int, $error], false)}];
+	asciiSet.init($Uint32, 8);
+	Builder.init("strings", [{prop: "addr", name: "addr", embedded: false, exported: false, typ: ptrType$1, tag: ""}, {prop: "buf", name: "buf", embedded: false, exported: false, typ: sliceType$2, tag: ""}]);
+	$init = function() {
+		$pkg.$init = function() {};
+		/* */ var $f, $c = false, $s = 0, $r; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+		$r = errors.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = js.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = bytealg.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = io.$init(); /* */ $s = 4; case 4: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = sync.$init(); /* */ $s = 5; case 5: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = unicode.$init(); /* */ $s = 6; case 6: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = utf8.$init(); /* */ $s = 7; case 7: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		asciiSpace = $toNativeArray($kindUint8, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
+	};
+	$pkg.$init = $init;
+	return $pkg;
+})();
+$packages["bufio"] = (function() {
+	var $pkg = {}, $init, bytes, errors, io, strings, utf8, Scanner, SplitFunc, sliceType, ptrType$3, errNegativeRead, errNegativeWrite, NewScanner, dropCR, ScanLines;
+	bytes = $packages["bytes"];
+	errors = $packages["errors"];
+	io = $packages["io"];
+	strings = $packages["strings"];
+	utf8 = $packages["unicode/utf8"];
+	Scanner = $pkg.Scanner = $newType(0, $kindStruct, "bufio.Scanner", true, "bufio", true, function(r_, split_, maxTokenSize_, token_, buf_, start_, end_, err_, empties_, scanCalled_, done_) {
+		this.$val = this;
+		if (arguments.length === 0) {
+			this.r = $ifaceNil;
+			this.split = $throwNilPointerError;
+			this.maxTokenSize = 0;
+			this.token = sliceType.nil;
+			this.buf = sliceType.nil;
+			this.start = 0;
+			this.end = 0;
+			this.err = $ifaceNil;
+			this.empties = 0;
+			this.scanCalled = false;
+			this.done = false;
+			return;
+		}
+		this.r = r_;
+		this.split = split_;
+		this.maxTokenSize = maxTokenSize_;
+		this.token = token_;
+		this.buf = buf_;
+		this.start = start_;
+		this.end = end_;
+		this.err = err_;
+		this.empties = empties_;
+		this.scanCalled = scanCalled_;
+		this.done = done_;
+	});
+	SplitFunc = $pkg.SplitFunc = $newType(4, $kindFunc, "bufio.SplitFunc", true, "bufio", true, null);
+	sliceType = $sliceType($Uint8);
+	ptrType$3 = $ptrType(Scanner);
+	NewScanner = function(r) {
+		var r;
+		return new Scanner.ptr(r, ScanLines, 65536, sliceType.nil, sliceType.nil, 0, 0, $ifaceNil, 0, false, false);
+	};
+	$pkg.NewScanner = NewScanner;
+	Scanner.ptr.prototype.Err = function() {
+		var s;
+		s = this;
+		if ($interfaceIsEqual(s.err, io.EOF)) {
+			return $ifaceNil;
+		}
+		return s.err;
+	};
+	Scanner.prototype.Err = function() { return this.$val.Err(); };
+	Scanner.ptr.prototype.Bytes = function() {
+		var s;
+		s = this;
+		return s.token;
+	};
+	Scanner.prototype.Bytes = function() { return this.$val.Bytes(); };
+	Scanner.ptr.prototype.Text = function() {
+		var s;
+		s = this;
+		return ($bytesToString(s.token));
+	};
+	Scanner.prototype.Text = function() { return this.$val.Text(); };
+	Scanner.ptr.prototype.Scan = function() {
+		var {_q, _r, _r$1, _tuple, _tuple$1, advance, err, err$1, loop, n, newBuf, newSize, s, token, $s, $r, $c} = $restore(this, {});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		s = this;
+		if (s.done) {
+			$s = -1; return false;
+		}
+		s.scanCalled = true;
+		/* while (true) { */ case 1:
+			/* */ if (s.end > s.start || !($interfaceIsEqual(s.err, $ifaceNil))) { $s = 3; continue; }
+			/* */ $s = 4; continue;
+			/* if (s.end > s.start || !($interfaceIsEqual(s.err, $ifaceNil))) { */ case 3:
+				_r = s.split($subslice(s.buf, s.start, s.end), !($interfaceIsEqual(s.err, $ifaceNil))); /* */ $s = 5; case 5: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+				_tuple = _r;
+				advance = _tuple[0];
+				token = _tuple[1];
+				err = _tuple[2];
+				if (!($interfaceIsEqual(err, $ifaceNil))) {
+					if ($interfaceIsEqual(err, $pkg.ErrFinalToken)) {
+						s.token = token;
+						s.done = true;
+						$s = -1; return true;
+					}
+					s.setErr(err);
+					$s = -1; return false;
+				}
+				if (!s.advance(advance)) {
+					$s = -1; return false;
+				}
+				s.token = token;
+				if (!(token === sliceType.nil)) {
+					if ($interfaceIsEqual(s.err, $ifaceNil) || advance > 0) {
+						s.empties = 0;
+					} else {
+						s.empties = s.empties + (1) >> 0;
+						if (s.empties > 100) {
+							$panic(new $String("bufio.Scan: too many empty tokens without progressing"));
+						}
+					}
+					$s = -1; return true;
+				}
+			/* } */ case 4:
+			if (!($interfaceIsEqual(s.err, $ifaceNil))) {
+				s.start = 0;
+				s.end = 0;
+				$s = -1; return false;
+			}
+			if (s.start > 0 && ((s.end === s.buf.$length) || s.start > (_q = s.buf.$length / 2, (_q === _q && _q !== 1/0 && _q !== -1/0) ? _q >> 0 : $throwRuntimeError("integer divide by zero")))) {
+				$copySlice(s.buf, $subslice(s.buf, s.start, s.end));
+				s.end = s.end - (s.start) >> 0;
+				s.start = 0;
+			}
+			if (s.end === s.buf.$length) {
+				if (s.buf.$length >= s.maxTokenSize || s.buf.$length > 1073741823) {
+					s.setErr($pkg.ErrTooLong);
+					$s = -1; return false;
+				}
+				newSize = $imul(s.buf.$length, 2);
+				if (newSize === 0) {
+					newSize = 4096;
+				}
+				if (newSize > s.maxTokenSize) {
+					newSize = s.maxTokenSize;
+				}
+				newBuf = $makeSlice(sliceType, newSize);
+				$copySlice(newBuf, $subslice(s.buf, s.start, s.end));
+				s.buf = newBuf;
+				s.end = s.end - (s.start) >> 0;
+				s.start = 0;
+			}
+			loop = 0;
+			/* while (true) { */ case 6:
+				_r$1 = s.r.Read($subslice(s.buf, s.end, s.buf.$length)); /* */ $s = 8; case 8: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+				_tuple$1 = _r$1;
+				n = _tuple$1[0];
+				err$1 = _tuple$1[1];
+				if (n < 0 || (s.buf.$length - s.end >> 0) < n) {
+					s.setErr($pkg.ErrBadReadCount);
+					/* break; */ $s = 7; continue;
+				}
+				s.end = s.end + (n) >> 0;
+				if (!($interfaceIsEqual(err$1, $ifaceNil))) {
+					s.setErr(err$1);
+					/* break; */ $s = 7; continue;
+				}
+				if (n > 0) {
+					s.empties = 0;
+					/* break; */ $s = 7; continue;
+				}
+				loop = loop + (1) >> 0;
+				if (loop > 100) {
+					s.setErr(io.ErrNoProgress);
+					/* break; */ $s = 7; continue;
+				}
+			$s = 6; continue;
+			case 7:
+		$s = 1; continue;
+		case 2:
+		$s = -1; return false;
+		/* */ } return; } var $f = {$blk: Scanner.ptr.prototype.Scan, $c: true, $r, _q, _r, _r$1, _tuple, _tuple$1, advance, err, err$1, loop, n, newBuf, newSize, s, token, $s};return $f;
+	};
+	Scanner.prototype.Scan = function() { return this.$val.Scan(); };
+	Scanner.ptr.prototype.advance = function(n) {
+		var n, s;
+		s = this;
+		if (n < 0) {
+			s.setErr($pkg.ErrNegativeAdvance);
+			return false;
+		}
+		if (n > (s.end - s.start >> 0)) {
+			s.setErr($pkg.ErrAdvanceTooFar);
+			return false;
+		}
+		s.start = s.start + (n) >> 0;
+		return true;
+	};
+	Scanner.prototype.advance = function(n) { return this.$val.advance(n); };
+	Scanner.ptr.prototype.setErr = function(err) {
+		var err, s;
+		s = this;
+		if ($interfaceIsEqual(s.err, $ifaceNil) || $interfaceIsEqual(s.err, io.EOF)) {
+			s.err = err;
+		}
+	};
+	Scanner.prototype.setErr = function(err) { return this.$val.setErr(err); };
+	Scanner.ptr.prototype.Buffer = function(buf, max) {
+		var buf, max, s;
+		s = this;
+		if (s.scanCalled) {
+			$panic(new $String("Buffer called after Scan"));
+		}
+		s.buf = $subslice(buf, 0, buf.$capacity);
+		s.maxTokenSize = max;
+	};
+	Scanner.prototype.Buffer = function(buf, max) { return this.$val.Buffer(buf, max); };
+	Scanner.ptr.prototype.Split = function(split) {
+		var s, split;
+		s = this;
+		if (s.scanCalled) {
+			$panic(new $String("Split called after Scan"));
+		}
+		s.split = split;
+	};
+	Scanner.prototype.Split = function(split) { return this.$val.Split(split); };
+	dropCR = function(data) {
+		var data, x;
+		if (data.$length > 0 && ((x = data.$length - 1 >> 0, ((x < 0 || x >= data.$length) ? ($throwRuntimeError("index out of range"), undefined) : data.$array[data.$offset + x])) === 13)) {
+			return $subslice(data, 0, (data.$length - 1 >> 0));
+		}
+		return data;
+	};
+	ScanLines = function(data, atEOF) {
+		var _tmp, _tmp$1, _tmp$10, _tmp$11, _tmp$2, _tmp$3, _tmp$4, _tmp$5, _tmp$6, _tmp$7, _tmp$8, _tmp$9, advance, atEOF, data, err, i, token;
+		advance = 0;
+		token = sliceType.nil;
+		err = $ifaceNil;
+		if (atEOF && (data.$length === 0)) {
+			_tmp = 0;
+			_tmp$1 = sliceType.nil;
+			_tmp$2 = $ifaceNil;
+			advance = _tmp;
+			token = _tmp$1;
+			err = _tmp$2;
+			return [advance, token, err];
+		}
+		i = bytes.IndexByte(data, 10);
+		if (i >= 0) {
+			_tmp$3 = i + 1 >> 0;
+			_tmp$4 = dropCR($subslice(data, 0, i));
+			_tmp$5 = $ifaceNil;
+			advance = _tmp$3;
+			token = _tmp$4;
+			err = _tmp$5;
+			return [advance, token, err];
+		}
+		if (atEOF) {
+			_tmp$6 = data.$length;
+			_tmp$7 = dropCR(data);
+			_tmp$8 = $ifaceNil;
+			advance = _tmp$6;
+			token = _tmp$7;
+			err = _tmp$8;
+			return [advance, token, err];
+		}
+		_tmp$9 = 0;
+		_tmp$10 = sliceType.nil;
+		_tmp$11 = $ifaceNil;
+		advance = _tmp$9;
+		token = _tmp$10;
+		err = _tmp$11;
+		return [advance, token, err];
+	};
+	$pkg.ScanLines = ScanLines;
+	ptrType$3.methods = [{prop: "Err", name: "Err", pkg: "", typ: $funcType([], [$error], false)}, {prop: "Bytes", name: "Bytes", pkg: "", typ: $funcType([], [sliceType], false)}, {prop: "Text", name: "Text", pkg: "", typ: $funcType([], [$String], false)}, {prop: "Scan", name: "Scan", pkg: "", typ: $funcType([], [$Bool], false)}, {prop: "advance", name: "advance", pkg: "bufio", typ: $funcType([$Int], [$Bool], false)}, {prop: "setErr", name: "setErr", pkg: "bufio", typ: $funcType([$error], [], false)}, {prop: "Buffer", name: "Buffer", pkg: "", typ: $funcType([sliceType, $Int], [], false)}, {prop: "Split", name: "Split", pkg: "", typ: $funcType([SplitFunc], [], false)}];
+	Scanner.init("bufio", [{prop: "r", name: "r", embedded: false, exported: false, typ: io.Reader, tag: ""}, {prop: "split", name: "split", embedded: false, exported: false, typ: SplitFunc, tag: ""}, {prop: "maxTokenSize", name: "maxTokenSize", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "token", name: "token", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "buf", name: "buf", embedded: false, exported: false, typ: sliceType, tag: ""}, {prop: "start", name: "start", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "end", name: "end", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "err", name: "err", embedded: false, exported: false, typ: $error, tag: ""}, {prop: "empties", name: "empties", embedded: false, exported: false, typ: $Int, tag: ""}, {prop: "scanCalled", name: "scanCalled", embedded: false, exported: false, typ: $Bool, tag: ""}, {prop: "done", name: "done", embedded: false, exported: false, typ: $Bool, tag: ""}]);
+	SplitFunc.init([sliceType, $Bool], [$Int, sliceType, $error], false);
+	$init = function() {
+		$pkg.$init = function() {};
+		/* */ var $f, $c = false, $s = 0, $r; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
+		$r = bytes.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = errors.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = io.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = strings.$init(); /* */ $s = 4; case 4: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = utf8.$init(); /* */ $s = 5; case 5: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$pkg.ErrTooLong = errors.New("bufio.Scanner: token too long");
+		$pkg.ErrNegativeAdvance = errors.New("bufio.Scanner: SplitFunc returns negative advance count");
+		$pkg.ErrAdvanceTooFar = errors.New("bufio.Scanner: SplitFunc returns advance count beyond input");
+		$pkg.ErrBadReadCount = errors.New("bufio.Scanner: Read returned impossible count");
+		$pkg.ErrFinalToken = errors.New("final token");
+		$pkg.ErrInvalidUnreadByte = errors.New("bufio: invalid use of UnreadByte");
+		$pkg.ErrInvalidUnreadRune = errors.New("bufio: invalid use of UnreadRune");
+		$pkg.ErrBufferFull = errors.New("bufio: buffer full");
+		$pkg.ErrNegativeCount = errors.New("bufio: negative count");
+		errNegativeRead = errors.New("bufio: reader returned negative count from Read");
+		errNegativeWrite = errors.New("bufio: writer returned negative count from Write");
+		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
+	};
+	$pkg.$init = $init;
+	return $pkg;
+})();
 $packages["github.com/TimothyStiles/poly/transform"] = (function() {
 	var $pkg = {}, $init, strings, sliceType, complementBaseRuneMap, ReverseComplement, ComplementBase;
 	strings = $packages["strings"];
@@ -36325,7 +36535,7 @@ $packages["regexp"] = (function() {
 	return $pkg;
 })();
 $packages["github.com/TimothyStiles/poly/io/genbank"] = (function() {
-	var $pkg = {}, $init, bufio, bytes, fmt, transform, log, wordwrap, io, os, regexp, strconv, strings, Genbank, Meta, Feature, Reference, Locus, Location, parseLoopParameters, sliceType, sliceType$1, sliceType$2, sliceType$3, sliceType$4, ptrType, sliceType$5, sliceType$6, ptrType$1, ptrType$2, mapType, ptrType$3, ptrType$4, parseMultiNthFn, parseReferencesFn, genBankMoleculeTypes, genbankDivisions, getFeatureSequence, Read, ReadMultiNth, ParseMultiNth, countLeadingSpaces, parseMetadata, parseReferences, parseLocus, getSourceOrganism, parseLocation;
+	var $pkg = {}, $init, bufio, bytes, fmt, transform, log, wordwrap, io, os, regexp, strconv, strings, Genbank, Meta, Feature, Reference, Locus, Location, parseLoopParameters, sliceType, sliceType$1, sliceType$2, sliceType$3, sliceType$4, ptrType, sliceType$5, sliceType$6, ptrType$1, ptrType$2, mapType, ptrType$3, ptrType$4, parseMultiNthFn, parseReferencesFn, genBankMoleculeTypes, genbankDivisions, getFeatureSequence, Read, ReadMultiNth, Parse, ParseMultiNth, countLeadingSpaces, parseMetadata, parseReferences, parseLocus, getSourceOrganism, parseLocation;
 	bufio = $packages["bufio"];
 	bytes = $packages["bytes"];
 	fmt = $packages["fmt"];
@@ -36611,6 +36821,20 @@ $packages["github.com/TimothyStiles/poly/io/genbank"] = (function() {
 		/* */ } return; } var $f = {$blk: ReadMultiNth, $c: true, $r, _r, _r$1, _tuple, _tuple$1, count, err, file, path, sequence, $s};return $f;
 	};
 	$pkg.ReadMultiNth = ReadMultiNth;
+	Parse = function(r) {
+		var {_r, _tuple, err, genbankSlice, r, $s, $r, $c} = $restore(this, {r});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		_r = parseMultiNthFn(r, 1); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		_tuple = _r;
+		genbankSlice = _tuple[0];
+		err = _tuple[1];
+		if (!($interfaceIsEqual(err, $ifaceNil))) {
+			$s = -1; return [new Genbank.ptr(new Meta.ptr("", "", "", "", "", "", "", sliceType.nil, "", new Locus.ptr("", "", "", "", "", "", false, false), sliceType$2.nil, false, "", "", ""), sliceType$3.nil, ""), err];
+		}
+		$s = -1; return [(0 >= genbankSlice.$length ? ($throwRuntimeError("index out of range"), undefined) : genbankSlice.$array[genbankSlice.$offset + 0]), err];
+		/* */ } return; } var $f = {$blk: Parse, $c: true, $r, _r, _tuple, err, genbankSlice, r, $s};return $f;
+	};
+	$pkg.Parse = Parse;
 	parseLoopParameters.ptr.prototype.init = function() {
 		var params;
 		params = this;
@@ -37526,26 +37750,31 @@ $packages["github.com/miratronix/jopher"] = (function() {
 	return $pkg;
 })();
 $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
-	var $pkg = {}, $init, genbank, js, jopher, GenbankModule, GenbankJs, MetaJs, ReferenceJs, LocusJs, FeatureJs, LocationJs, ptrType, funcType, sliceType, funcType$1, sliceType$1, sliceType$2, sliceType$3, sliceType$4, mapType, GenbankFactory, Read, mapGenbank, mapFeatures, mapMeta, mapLocus, mapReferences, mapLocation;
+	var $pkg = {}, $init, bytes, fmt, genbank, js, jopher, reflect, GenbankModule, GenbankJs, MetaJs, ReferenceJs, LocusJs, FeatureJs, LocationJs, ptrType, funcType, sliceType, funcType$1, sliceType$1, funcType$2, sliceType$2, sliceType$3, sliceType$4, sliceType$5, mapType, GenbankFactory, Read, Parse, mapGenbank, mapFeatures, mapMeta, mapLocus, mapReferences, mapLocation;
+	bytes = $packages["bytes"];
+	fmt = $packages["fmt"];
 	genbank = $packages["github.com/TimothyStiles/poly/io/genbank"];
 	js = $packages["github.com/gopherjs/gopherjs/js"];
 	jopher = $packages["github.com/miratronix/jopher"];
-	GenbankModule = $pkg.GenbankModule = $newType(0, $kindStruct, "genbank.GenbankModule", true, "github.com/isaacguerreir/poly.js/go/genbank", true, function(Object_, Read_) {
+	reflect = $packages["reflect"];
+	GenbankModule = $pkg.GenbankModule = $newType(0, $kindStruct, "genbank.GenbankModule", true, "github.com/isaacguerreir/poly.js/go/genbank", true, function(Object_, Read_, Parse_) {
 		this.$val = this;
 		if (arguments.length === 0) {
 			this.Object = null;
 			this.Read = $throwNilPointerError;
+			this.Parse = $throwNilPointerError;
 			return;
 		}
 		this.Object = Object_;
 		this.Read = Read_;
+		this.Parse = Parse_;
 	});
 	GenbankJs = $pkg.GenbankJs = $newType(0, $kindStruct, "genbank.GenbankJs", true, "github.com/isaacguerreir/poly.js/go/genbank", true, function(Object_, Meta_, Features_, Sequence_) {
 		this.$val = this;
 		if (arguments.length === 0) {
 			this.Object = null;
-			this.Meta = new MetaJs.ptr(null, "", "", "", "", "", "", "", sliceType$1.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$2.nil, false, "", "", "");
-			this.Features = sliceType$3.nil;
+			this.Meta = new MetaJs.ptr(null, "", "", "", "", "", "", "", sliceType$2.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$3.nil, false, "", "", "");
+			this.Features = sliceType$4.nil;
 			this.Sequence = "";
 			return;
 		}
@@ -37565,10 +37794,10 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 			this.Keywords = "";
 			this.Organism = "";
 			this.Source = "";
-			this.Taxonomy = sliceType$1.nil;
+			this.Taxonomy = sliceType$2.nil;
 			this.Origin = "";
 			this.Locus = new LocusJs.ptr(null, "", "", "", "", "", "", false, false);
-			this.References = sliceType$2.nil;
+			this.References = sliceType$3.nil;
 			this.Other = false;
 			this.Name = "";
 			this.SequenceHash = "";
@@ -37646,7 +37875,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 			this.SequenceHash = "";
 			this.SequenceHashFunction = "";
 			this.Sequence = "";
-			this.Location = new LocationJs.ptr(null, 0, 0, false, false, false, false, "", sliceType$4.nil);
+			this.Location = new LocationJs.ptr(null, 0, 0, false, false, false, false, "", sliceType$5.nil);
 			return;
 		}
 		this.Object = Object_;
@@ -37669,7 +37898,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 			this.FivePrimePartial = false;
 			this.ThreePrimePartial = false;
 			this.GbkLocationString = "";
-			this.SubLocations = sliceType$4.nil;
+			this.SubLocations = sliceType$5.nil;
 			return;
 		}
 		this.Object = Object_;
@@ -37686,19 +37915,23 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 	funcType = $funcType([$String], [ptrType], false);
 	sliceType = $sliceType($emptyInterface);
 	funcType$1 = $funcType([sliceType], [ptrType], true);
-	sliceType$1 = $sliceType($String);
-	sliceType$2 = $sliceType(ReferenceJs);
-	sliceType$3 = $sliceType(FeatureJs);
-	sliceType$4 = $sliceType(LocationJs);
+	sliceType$1 = $sliceType($Uint8);
+	funcType$2 = $funcType([sliceType$1], [ptrType], false);
+	sliceType$2 = $sliceType($String);
+	sliceType$3 = $sliceType(ReferenceJs);
+	sliceType$4 = $sliceType(FeatureJs);
+	sliceType$5 = $sliceType(LocationJs);
 	mapType = $mapType($String, $String);
 	GenbankFactory = function() {
-		var {_r, module, $s, $r, $c} = $restore(this, {});
+		var {_r, _r$1, module, $s, $r, $c} = $restore(this, {});
 		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
-		module = new GenbankModule.ptr(jopher.NewObject(), $throwNilPointerError);
+		module = new GenbankModule.ptr(jopher.NewObject(), $throwNilPointerError, $throwNilPointerError);
 		_r = jopher.Promisify(new funcType(Read)); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
 		module.Object.read = $externalize(_r, funcType$1);
+		_r$1 = jopher.Promisify(new funcType$2(Parse)); /* */ $s = 2; case 2: if($c) { $c = false; _r$1 = _r$1.$blk(); } if (_r$1 && _r$1.$blk !== undefined) { break s; }
+		module.Object.parse = $externalize(_r$1, funcType$1);
 		$s = -1; return module.Object;
-		/* */ } return; } var $f = {$blk: GenbankFactory, $c: true, $r, _r, module, $s};return $f;
+		/* */ } return; } var $f = {$blk: GenbankFactory, $c: true, $r, _r, _r$1, module, $s};return $f;
 	};
 	$pkg.GenbankFactory = GenbankFactory;
 	Read = function(path) {
@@ -37711,17 +37944,28 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 		/* */ } return; } var $f = {$blk: Read, $c: true, $r, _r, _tuple, data, path, $s};return $f;
 	};
 	$pkg.Read = Read;
+	Parse = function(buffer) {
+		var {_r, _tuple, buffer, data, reader, $s, $r, $c} = $restore(this, {buffer});
+		/* */ $s = $s || 0; s: while (true) { switch ($s) { case 0:
+		reader = bytes.NewReader(buffer);
+		_r = genbank.Parse(reader); /* */ $s = 1; case 1: if($c) { $c = false; _r = _r.$blk(); } if (_r && _r.$blk !== undefined) { break s; }
+		_tuple = _r;
+		data = $clone(_tuple[0], genbank.Genbank);
+		$s = -1; return mapGenbank($clone(data, genbank.Genbank)).Object;
+		/* */ } return; } var $f = {$blk: Parse, $c: true, $r, _r, _tuple, buffer, data, reader, $s};return $f;
+	};
+	$pkg.Parse = Parse;
 	mapGenbank = function(source) {
 		var source, target;
-		target = new GenbankJs.ptr(jopher.NewObject(), new MetaJs.ptr(null, "", "", "", "", "", "", "", sliceType$1.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$2.nil, false, "", "", ""), sliceType$3.nil, "");
+		target = new GenbankJs.ptr(jopher.NewObject(), new MetaJs.ptr(null, "", "", "", "", "", "", "", sliceType$2.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$3.nil, false, "", "", ""), sliceType$4.nil, "");
 		target.Object.sequence = $externalize(source.Sequence, $String);
 		MetaJs.copy($internalize(target.Object.meta, MetaJs), mapMeta($clone(source.Meta, genbank.Meta)));
-		target.Object.features = $externalize(mapFeatures(source.Features), sliceType$3);
+		target.Object.features = $externalize(mapFeatures(source.Features), sliceType$4);
 		return target;
 	};
 	mapFeatures = function(features) {
 		var _i, _ref, feature, featureJs, features, featuresJs;
-		featuresJs = sliceType$3.nil;
+		featuresJs = sliceType$4.nil;
 		if (features.$length === 0) {
 			return featuresJs;
 		}
@@ -37730,7 +37974,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 		while (true) {
 			if (!(_i < _ref.$length)) { break; }
 			feature = $clone(((_i < 0 || _i >= _ref.$length) ? ($throwRuntimeError("index out of range"), undefined) : _ref.$array[_ref.$offset + _i]), genbank.Feature);
-			featureJs = new FeatureJs.ptr(jopher.NewObject(), "", "", false, "", "", "", new LocationJs.ptr(null, 0, 0, false, false, false, false, "", sliceType$4.nil));
+			featureJs = new FeatureJs.ptr(jopher.NewObject(), "", "", false, "", "", "", new LocationJs.ptr(null, 0, 0, false, false, false, false, "", sliceType$5.nil));
 			featureJs.Object.type = $externalize(feature.Type, $String);
 			featureJs.Object.description = $externalize(feature.Description, $String);
 			featureJs.Object.attributes = $externalize(feature.Attributes, mapType);
@@ -37745,7 +37989,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 	};
 	mapMeta = function(meta) {
 		var meta, metaJs;
-		metaJs = new MetaJs.ptr(jopher.NewObject(), "", "", "", "", "", "", "", sliceType$1.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$2.nil, false, "", "", "");
+		metaJs = new MetaJs.ptr(jopher.NewObject(), "", "", "", "", "", "", "", sliceType$2.nil, "", new LocusJs.ptr(null, "", "", "", "", "", "", false, false), sliceType$3.nil, false, "", "", "");
 		metaJs.Object.date = $externalize(meta.Date, $String);
 		metaJs.Object.definition = $externalize(meta.Definition, $String);
 		metaJs.Object.accession = $externalize(meta.Accession, $String);
@@ -37753,10 +37997,10 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 		metaJs.Object.keywords = $externalize(meta.Keywords, $String);
 		metaJs.Object.organism = $externalize(meta.Organism, $String);
 		metaJs.Object.source = $externalize(meta.Source, $String);
-		metaJs.Object.taxonomy = $externalize(meta.Taxonomy, sliceType$1);
+		metaJs.Object.taxonomy = $externalize(meta.Taxonomy, sliceType$2);
 		metaJs.Object.origin = $externalize(meta.Origin, $String);
 		LocusJs.copy($internalize(metaJs.Object.locus, LocusJs), mapLocus($clone(meta.Locus, genbank.Locus)));
-		metaJs.Object.references = $externalize(mapReferences(meta.References), sliceType$2);
+		metaJs.Object.references = $externalize(mapReferences(meta.References), sliceType$3);
 		metaJs.Object.other = $externalize(meta.Other, mapType);
 		metaJs.Object.name = $externalize(meta.Name, $String);
 		metaJs.Object.sequence_hash = $externalize(meta.SequenceHash, $String);
@@ -37778,7 +38022,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 	};
 	mapReferences = function(references) {
 		var _i, _ref, reference, referenceJs, references, referencesJs;
-		referencesJs = sliceType$2.nil;
+		referencesJs = sliceType$3.nil;
 		if (references.$length === 0) {
 			return referencesJs;
 		}
@@ -37801,7 +38045,7 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 	};
 	mapLocation = function(location) {
 		var _i, _ref, location, locationJs, subLocation, subLocationsJs;
-		locationJs = new LocationJs.ptr(jopher.NewObject(), 0, 0, false, false, false, false, "", sliceType$4.nil);
+		locationJs = new LocationJs.ptr(jopher.NewObject(), 0, 0, false, false, false, false, "", sliceType$5.nil);
 		locationJs.Object.start = location.Start;
 		locationJs.Object.end = location.End;
 		locationJs.Object.complement = $externalize(location.Complement, $Bool);
@@ -37809,9 +38053,9 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 		locationJs.Object.five_prime_partial = $externalize(location.FivePrimePartial, $Bool);
 		locationJs.Object.three_prime_partial = $externalize(location.ThreePrimePartial, $Bool);
 		locationJs.Object.gbk_location_string = $externalize(location.GbkLocationString, $String);
-		subLocationsJs = sliceType$4.nil;
+		subLocationsJs = sliceType$5.nil;
 		if (location.SubLocations.$length === 0) {
-			locationJs.Object.sub_locations = $externalize(subLocationsJs, sliceType$4);
+			locationJs.Object.sub_locations = $externalize(subLocationsJs, sliceType$5);
 			return locationJs;
 		}
 		_ref = location.SubLocations;
@@ -37822,22 +38066,25 @@ $packages["github.com/isaacguerreir/poly.js/go/genbank"] = (function() {
 			subLocationsJs = $append(subLocationsJs, mapLocation($clone(subLocation, genbank.Location)));
 			_i++;
 		}
-		locationJs.Object.sub_locations = $externalize(subLocationsJs, sliceType$4);
+		locationJs.Object.sub_locations = $externalize(subLocationsJs, sliceType$5);
 		return locationJs;
 	};
-	GenbankModule.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Read", name: "Read", embedded: false, exported: true, typ: funcType$1, tag: "js:\"read\""}]);
-	GenbankJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Meta", name: "Meta", embedded: false, exported: true, typ: MetaJs, tag: "js:\"meta\""}, {prop: "Features", name: "Features", embedded: false, exported: true, typ: sliceType$3, tag: "js:\"features\""}, {prop: "Sequence", name: "Sequence", embedded: false, exported: true, typ: $String, tag: "js:\"sequence\""}]);
-	MetaJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Date", name: "Date", embedded: false, exported: true, typ: $String, tag: "js:\"date\""}, {prop: "Definition", name: "Definition", embedded: false, exported: true, typ: $String, tag: "js:\"definition\""}, {prop: "Accession", name: "Accession", embedded: false, exported: true, typ: $String, tag: "js:\"accession\""}, {prop: "Version", name: "Version", embedded: false, exported: true, typ: $String, tag: "js:\"version\""}, {prop: "Keywords", name: "Keywords", embedded: false, exported: true, typ: $String, tag: "js:\"keywords\""}, {prop: "Organism", name: "Organism", embedded: false, exported: true, typ: $String, tag: "js:\"organism\""}, {prop: "Source", name: "Source", embedded: false, exported: true, typ: $String, tag: "js:\"source\""}, {prop: "Taxonomy", name: "Taxonomy", embedded: false, exported: true, typ: sliceType$1, tag: "js:\"taxonomy\""}, {prop: "Origin", name: "Origin", embedded: false, exported: true, typ: $String, tag: "js:\"origin\""}, {prop: "Locus", name: "Locus", embedded: false, exported: true, typ: LocusJs, tag: "js:\"locus\""}, {prop: "References", name: "References", embedded: false, exported: true, typ: sliceType$2, tag: "js:\"references\""}, {prop: "Other", name: "Other", embedded: false, exported: true, typ: mapType, tag: "js:\"other\""}, {prop: "Name", name: "Name", embedded: false, exported: true, typ: $String, tag: "js:\"name\""}, {prop: "SequenceHash", name: "SequenceHash", embedded: false, exported: true, typ: $String, tag: "js:\"sequence_hash\""}, {prop: "SequenceHashFunction", name: "SequenceHashFunction", embedded: false, exported: true, typ: $String, tag: "js:\"hash_function\""}]);
+	GenbankModule.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Read", name: "Read", embedded: false, exported: true, typ: funcType$1, tag: "js:\"read\""}, {prop: "Parse", name: "Parse", embedded: false, exported: true, typ: funcType$1, tag: "js:\"parse\""}]);
+	GenbankJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Meta", name: "Meta", embedded: false, exported: true, typ: MetaJs, tag: "js:\"meta\""}, {prop: "Features", name: "Features", embedded: false, exported: true, typ: sliceType$4, tag: "js:\"features\""}, {prop: "Sequence", name: "Sequence", embedded: false, exported: true, typ: $String, tag: "js:\"sequence\""}]);
+	MetaJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Date", name: "Date", embedded: false, exported: true, typ: $String, tag: "js:\"date\""}, {prop: "Definition", name: "Definition", embedded: false, exported: true, typ: $String, tag: "js:\"definition\""}, {prop: "Accession", name: "Accession", embedded: false, exported: true, typ: $String, tag: "js:\"accession\""}, {prop: "Version", name: "Version", embedded: false, exported: true, typ: $String, tag: "js:\"version\""}, {prop: "Keywords", name: "Keywords", embedded: false, exported: true, typ: $String, tag: "js:\"keywords\""}, {prop: "Organism", name: "Organism", embedded: false, exported: true, typ: $String, tag: "js:\"organism\""}, {prop: "Source", name: "Source", embedded: false, exported: true, typ: $String, tag: "js:\"source\""}, {prop: "Taxonomy", name: "Taxonomy", embedded: false, exported: true, typ: sliceType$2, tag: "js:\"taxonomy\""}, {prop: "Origin", name: "Origin", embedded: false, exported: true, typ: $String, tag: "js:\"origin\""}, {prop: "Locus", name: "Locus", embedded: false, exported: true, typ: LocusJs, tag: "js:\"locus\""}, {prop: "References", name: "References", embedded: false, exported: true, typ: sliceType$3, tag: "js:\"references\""}, {prop: "Other", name: "Other", embedded: false, exported: true, typ: mapType, tag: "js:\"other\""}, {prop: "Name", name: "Name", embedded: false, exported: true, typ: $String, tag: "js:\"name\""}, {prop: "SequenceHash", name: "SequenceHash", embedded: false, exported: true, typ: $String, tag: "js:\"sequence_hash\""}, {prop: "SequenceHashFunction", name: "SequenceHashFunction", embedded: false, exported: true, typ: $String, tag: "js:\"hash_function\""}]);
 	ReferenceJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Authors", name: "Authors", embedded: false, exported: true, typ: $String, tag: "js:\"authors\""}, {prop: "Title", name: "Title", embedded: false, exported: true, typ: $String, tag: "js:\"title\""}, {prop: "Journal", name: "Journal", embedded: false, exported: true, typ: $String, tag: "js:\"journal\""}, {prop: "PubMed", name: "PubMed", embedded: false, exported: true, typ: $String, tag: "js:\"pub_med\""}, {prop: "Remark", name: "Remark", embedded: false, exported: true, typ: $String, tag: "js:\"remark\""}, {prop: "Range", name: "Range", embedded: false, exported: true, typ: $String, tag: "js:\"range\""}]);
 	LocusJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Name", name: "Name", embedded: false, exported: true, typ: $String, tag: "js:\"name\""}, {prop: "SequenceLength", name: "SequenceLength", embedded: false, exported: true, typ: $String, tag: "js:\"sequence_length\""}, {prop: "MoleculeType", name: "MoleculeType", embedded: false, exported: true, typ: $String, tag: "js:\"molecule_type\""}, {prop: "GenbankDivision", name: "GenbankDivision", embedded: false, exported: true, typ: $String, tag: "js:\"genbank_division\""}, {prop: "ModificationDate", name: "ModificationDate", embedded: false, exported: true, typ: $String, tag: "js:\"modification_date\""}, {prop: "SequenceCoding", name: "SequenceCoding", embedded: false, exported: true, typ: $String, tag: "js:\"sequence_coding\""}, {prop: "Circular", name: "Circular", embedded: false, exported: true, typ: $Bool, tag: "js:\"circular\""}, {prop: "Linear", name: "Linear", embedded: false, exported: true, typ: $Bool, tag: "js:\"linear\""}]);
 	FeatureJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Type", name: "Type", embedded: false, exported: true, typ: $String, tag: "js:\"type\""}, {prop: "Description", name: "Description", embedded: false, exported: true, typ: $String, tag: "js:\"description\""}, {prop: "Attributes", name: "Attributes", embedded: false, exported: true, typ: mapType, tag: "js:\"attributes\""}, {prop: "SequenceHash", name: "SequenceHash", embedded: false, exported: true, typ: $String, tag: "js:\"sequence_hash\""}, {prop: "SequenceHashFunction", name: "SequenceHashFunction", embedded: false, exported: true, typ: $String, tag: "js:\"hash_function\""}, {prop: "Sequence", name: "Sequence", embedded: false, exported: true, typ: $String, tag: "js:\"sequence\""}, {prop: "Location", name: "Location", embedded: false, exported: true, typ: LocationJs, tag: "js:\"location\""}]);
-	LocationJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Start", name: "Start", embedded: false, exported: true, typ: $Int, tag: "js:\"start\""}, {prop: "End", name: "End", embedded: false, exported: true, typ: $Int, tag: "js:\"end\""}, {prop: "Complement", name: "Complement", embedded: false, exported: true, typ: $Bool, tag: "js:\"complement\""}, {prop: "Join", name: "Join", embedded: false, exported: true, typ: $Bool, tag: "js:\"join\""}, {prop: "FivePrimePartial", name: "FivePrimePartial", embedded: false, exported: true, typ: $Bool, tag: "js:\"five_prime_partial\""}, {prop: "ThreePrimePartial", name: "ThreePrimePartial", embedded: false, exported: true, typ: $Bool, tag: "js:\"three_prime_partial\""}, {prop: "GbkLocationString", name: "GbkLocationString", embedded: false, exported: true, typ: $String, tag: "js:\"gbk_location_string\""}, {prop: "SubLocations", name: "SubLocations", embedded: false, exported: true, typ: sliceType$4, tag: "js:\"sub_locations\""}]);
+	LocationJs.init("", [{prop: "Object", name: "Object", embedded: true, exported: true, typ: ptrType, tag: ""}, {prop: "Start", name: "Start", embedded: false, exported: true, typ: $Int, tag: "js:\"start\""}, {prop: "End", name: "End", embedded: false, exported: true, typ: $Int, tag: "js:\"end\""}, {prop: "Complement", name: "Complement", embedded: false, exported: true, typ: $Bool, tag: "js:\"complement\""}, {prop: "Join", name: "Join", embedded: false, exported: true, typ: $Bool, tag: "js:\"join\""}, {prop: "FivePrimePartial", name: "FivePrimePartial", embedded: false, exported: true, typ: $Bool, tag: "js:\"five_prime_partial\""}, {prop: "ThreePrimePartial", name: "ThreePrimePartial", embedded: false, exported: true, typ: $Bool, tag: "js:\"three_prime_partial\""}, {prop: "GbkLocationString", name: "GbkLocationString", embedded: false, exported: true, typ: $String, tag: "js:\"gbk_location_string\""}, {prop: "SubLocations", name: "SubLocations", embedded: false, exported: true, typ: sliceType$5, tag: "js:\"sub_locations\""}]);
 	$init = function() {
 		$pkg.$init = function() {};
 		/* */ var $f, $c = false, $s = 0, $r; if (this !== undefined && this.$blk !== undefined) { $f = this; $c = true; $s = $f.$s; $r = $f.$r; } s: while (true) { switch ($s) { case 0:
-		$r = genbank.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = js.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
-		$r = jopher.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = bytes.$init(); /* */ $s = 1; case 1: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = fmt.$init(); /* */ $s = 2; case 2: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = genbank.$init(); /* */ $s = 3; case 3: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = js.$init(); /* */ $s = 4; case 4: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = jopher.$init(); /* */ $s = 5; case 5: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
+		$r = reflect.$init(); /* */ $s = 6; case 6: if($c) { $c = false; $r = $r.$blk(); } if ($r && $r.$blk !== undefined) { break s; }
 		/* */ } return; } if ($f === undefined) { $f = { $blk: $init }; } $f.$s = $s; $f.$r = $r; return $f;
 	};
 	$pkg.$init = $init;

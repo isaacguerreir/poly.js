@@ -1,6 +1,8 @@
 package genbank
 
 import (
+	"bytes"
+
 	"github.com/TimothyStiles/poly/io/genbank"
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/miratronix/jopher"
@@ -9,6 +11,7 @@ import (
 type GenbankModule struct {
   *js.Object
   Read    func(args ...interface{}) *js.Object `js:"read"`
+  Parse   func(args ...interface{}) *js.Object `js:"parse"`
 }
 
 type GenbankJs struct {
@@ -87,11 +90,34 @@ type LocationJs struct {
 func GenbankFactory() *js.Object {
   module := GenbankModule{Object: jopher.NewObject()}
   module.Read = jopher.Promisify(Read)
+  module.Parse = jopher.Promisify(Parse)
   return module.Object
 }
 
 func Read(path string) *js.Object {
 	data, _ := genbank.Read(path)
+	return mapGenbank(data).Object
+}
+
+/*
+  GopherJS automatically converts Uint8Array to []byte, which is awesome but
+  if I use Buffer or ArrayType GopherJS converts as map[string]interface{}.
+  By itself, convert map[string]interface{} should not be a problem (at least
+  based on my superficial knowledge about type conversion in golang), but
+  somehow this generates a error that returns an empty object.
+
+  This is a problem because most of the data handlers for uploaded file (as
+  an example) will actually expose data as a Buffer and the user will have 
+  to make a new step to convert to Uint8Array, so parse could work correctly.
+
+  | At least I created a type definition expliciting parse argument to Uint8Array
+
+  The TODO for PARSE function is open a issue inside GopherJS and ask how properly
+  deal with this case.
+*/
+func Parse(buffer []byte) *js.Object { 
+  reader := bytes.NewReader(buffer)
+	data, _ := genbank.Parse(reader)
 	return mapGenbank(data).Object
 }
 

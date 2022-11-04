@@ -8,6 +8,7 @@ export as namespace Poly
 declare namespace Poly {
   namespace genbank {
     function read(path: string): Promise<GenbankJs>
+    function parse(data: Uint8Array): Promise<GenbankJs>
   }
   interface GenbankJs {
     meta: MetaJs;
