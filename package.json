@@ -9,7 +9,7 @@
     "dev:run": "ts-node src/inde.x",
     "go": "yarn go:clean && yarn go:build",
     "go:build": "gopherjs build -o ./src/index.js",
-    "go:clean": "rm -rf ./src/*.{js, map}",
+    "go:clean": "find ./src -name '*.js' -o -name '*.map' | xargs rm -f",
     "test:mock": "ts-node ./tests/genbank.test",
     "types:generate": "tygo generate"
   },
