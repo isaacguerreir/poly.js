@@ -10,6 +10,16 @@ declare namespace Poly {
     function read(path: string): Promise<GenbankJs>
     function parse(data: Uint8Array): Promise<GenbankJs>
   }
+  namespace fasta {
+    function read(path: string): Promise<Array<Fasta>>
+    function parse(data: Uint8Array): Promise<Array<Fasta>>
+  }
+  
+  interface Fasta {
+    sequence: string;
+    name: string;
+  }
+
   interface GenbankJs {
     meta: MetaJs;
     features: FeatureJs[];

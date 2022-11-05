@@ -6,8 +6,8 @@ import { genbank } from "../src";
     const fromRead = await genbank.read("./data/benchling.gb")
     console.log("From read sequence", fromRead.sequence)
 
-    const arrayByte = readFileSync('./data/benchling.gb')
-    const fromParse = await genbank.parse(new Uint8Array(arrayByte.buffer))
+    const buffer = readFileSync('./data/benchling.gb')
+    const fromParse = await genbank.parse(new Uint8Array(buffer))
     console.log("From parse sequence: ", fromParse.sequence)
   }
 )()
